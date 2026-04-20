@@ -35,7 +35,7 @@ jobs:
         working-directory: backend
 
       - name: Verify server syntax
-        run: node --check server.js
+        run: node --check backend/server.js
 
       - name: Run health check
         run: echo "✅ Syntax OK"
