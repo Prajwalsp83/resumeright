@@ -556,7 +556,7 @@ resource "aws_launch_template" "app" {
 
   vpc_security_group_ids = [aws_security_group.ec2.id]
 
-  user_data = base64encode(templatefile("${path.module}/bootstrap.sh", {
+  user_data = base64encode(templatefile("${path.module}/../scripts/bootstrap.sh", {
     mongo_uri = var.mongo_uri
     admin_key = var.admin_key
     app_name  = var.app_name
