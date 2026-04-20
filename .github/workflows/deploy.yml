@@ -2,7 +2,7 @@ name: ResumeRight CI/CD Pipeline
 
 on:
   push:
-    branches: [mai]
+    branches: [main]
   workflow_dispatch:
     inputs:
       destroy:
