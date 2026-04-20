@@ -293,17 +293,17 @@ resource "aws_s3_bucket_policy" "frontend" {
 resource "aws_s3_object" "index" {
   bucket       = aws_s3_bucket.frontend.id
   key          = "index.html"
-  source       = "${path.module}/../index.html"
+  source       = "${path.module}/../frontend/index.html"
   content_type = "text/html"
-  etag         = filemd5("${path.module}/../index.html")
+  etag         = filemd5("${path.module}/../frontend/index.html")
 }
 
 resource "aws_s3_object" "admin" {
   bucket       = aws_s3_bucket.frontend.id
   key          = "admin.html"
-  source       = "${path.module}/../admin.html"
+  source       = "${path.module}/../frontend/admin.html"
   content_type = "text/html"
-  etag         = filemd5("${path.module}/../admin.html")
+  etag         = filemd5("${path.module}/../frontend/admin.html")
 }
 
 ###############################################################################
