@@ -1,0 +1,10 @@
+node_modules/
+.env
+*.pem
+*.key
+data.json
+uploads/
+.DS_Store
+*.log
+dist/
+.npm/

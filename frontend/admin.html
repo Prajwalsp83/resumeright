@@ -1,0 +1,352 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>ResumeRight Admin</title>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+<style>
+:root{--navy:#0B1628;--navy2:#0F1F38;--card:#131F32;--gold:#E8A020;--gold2:#F5BC50;--white:#F8F5EE;--muted:#94A3B8;--border:rgba(232,160,32,0.18);--green:#22C55E;--yellow:#F59E0B;--blue:#3B82F6;--red:#EF4444;--purple:#8B5CF6;}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{background:var(--navy);color:var(--white);font-family:'Plus Jakarta Sans',sans-serif;min-height:100vh;}
+
+/* LOGIN */
+#loginScreen{display:flex;align-items:center;justify-content:center;min-height:100vh;padding:20px;}
+.login-box{background:var(--card);border:1px solid var(--border);border-radius:20px;padding:40px;width:100%;max-width:380px;text-align:center;}
+.login-box h1{font-family:'Fraunces',serif;font-size:26px;color:var(--gold);margin-bottom:6px;}
+.login-box p{font-size:13px;color:var(--muted);margin-bottom:24px;}
+.login-input{width:100%;background:rgba(255,255,255,.05);border:1px solid var(--border);border-radius:10px;padding:12px 14px;color:var(--white);font-family:'Plus Jakarta Sans',sans-serif;font-size:14px;outline:none;margin-bottom:12px;}
+.login-input:focus{border-color:var(--gold);}
+.login-btn{width:100%;background:var(--gold);color:var(--navy);font-weight:700;font-size:15px;padding:13px;border-radius:50px;border:none;cursor:pointer;font-family:'Plus Jakarta Sans',sans-serif;}
+.login-err{color:var(--red);font-size:13px;margin-top:8px;}
+
+/* DASHBOARD */
+#dashboard{display:none;}
+.topbar{background:rgba(11,22,40,.95);border-bottom:1px solid var(--border);padding:14px 24px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100;backdrop-filter:blur(12px);}
+.topbar-logo{font-family:'Fraunces',serif;font-size:20px;color:var(--gold);}
+.topbar-logo span{color:var(--white);}
+.topbar-right{display:flex;align-items:center;gap:12px;}
+.admin-tag{font-size:11px;font-weight:700;color:var(--gold);background:rgba(232,160,32,.12);border:1px solid var(--border);padding:4px 12px;border-radius:20px;}
+.live-dot{width:7px;height:7px;background:var(--green);border-radius:50%;display:inline-block;animation:pulse 2s infinite;}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+.live-txt{font-size:12px;color:var(--green);}
+.logout-btn{background:transparent;border:1px solid var(--border);color:var(--muted);font-size:12px;padding:6px 14px;border-radius:20px;cursor:pointer;font-family:'Plus Jakarta Sans',sans-serif;}
+.logout-btn:hover{border-color:var(--red);color:var(--red);}
+
+.main{padding:24px;}
+
+/* STATS */
+.stats-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:14px;margin-bottom:24px;}
+.stat-card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:18px 20px;position:relative;overflow:hidden;}
+.stat-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;border-radius:14px 14px 0 0;}
+.stat-card.c-total::before{background:var(--gold);}
+.stat-card.c-new::before{background:var(--green);}
+.stat-card.c-prog::before{background:var(--blue);}
+.stat-card.c-done::before{background:var(--purple);}
+.stat-card.c-paid::before{background:var(--yellow);}
+.stat-label{font-size:11px;color:var(--muted);font-weight:600;letter-spacing:.3px;margin-bottom:6px;}
+.stat-num{font-family:'Fraunces',serif;font-size:32px;color:var(--white);line-height:1;}
+.stat-icon{position:absolute;right:14px;top:50%;transform:translateY(-50%);font-size:24px;opacity:.25;}
+
+/* TOOLBAR */
+.toolbar{display:flex;align-items:center;gap:10px;margin-bottom:16px;flex-wrap:wrap;}
+.toolbar h2{font-family:'Fraunces',serif;font-size:18px;flex:1;}
+.search-input{background:rgba(255,255,255,.05);border:1px solid var(--border);border-radius:10px;padding:8px 13px;color:var(--white);font-family:'Plus Jakarta Sans',sans-serif;font-size:13px;outline:none;width:200px;}
+.search-input:focus{border-color:var(--gold);}
+.filter-sel{background:rgba(255,255,255,.05);border:1px solid var(--border);border-radius:10px;padding:8px 11px;color:var(--white);font-family:'Plus Jakarta Sans',sans-serif;font-size:13px;outline:none;cursor:pointer;}
+.filter-sel option{background:var(--navy2);}
+.refresh-btn{background:rgba(232,160,32,.1);border:1px solid var(--border);color:var(--gold);font-size:13px;padding:8px 16px;border-radius:10px;cursor:pointer;font-family:'Plus Jakarta Sans',sans-serif;font-weight:600;}
+
+/* TABLE */
+.table-wrap{background:var(--card);border:1px solid var(--border);border-radius:14px;overflow:hidden;margin-bottom:28px;}
+table{width:100%;border-collapse:collapse;}
+thead{background:rgba(255,255,255,.03);}
+th{padding:11px 14px;text-align:left;font-size:11px;font-weight:700;color:var(--muted);letter-spacing:.8px;text-transform:uppercase;border-bottom:1px solid var(--border);}
+td{padding:11px 14px;font-size:13px;border-bottom:1px solid rgba(255,255,255,.04);vertical-align:middle;}
+tr:last-child td{border-bottom:none;}
+tr:hover td{background:rgba(255,255,255,.02);}
+.lead-name{font-weight:600;font-size:14px;}
+.lead-sub{font-size:12px;color:var(--muted);}
+.svc-badge{display:inline-block;font-size:11px;font-weight:600;padding:3px 9px;border-radius:20px;white-space:nowrap;}
+.svc-resume{background:rgba(59,130,246,.12);color:#60a5fa;}
+.svc-naukri{background:rgba(34,197,94,.12);color:#4ade80;}
+.svc-linkedin{background:rgba(139,92,246,.12);color:#a78bfa;}
+.svc-bundle{background:rgba(232,160,32,.12);color:var(--gold2);}
+.svc-upload{background:rgba(148,163,184,.12);color:var(--muted);}
+.status-sel{background:rgba(255,255,255,.05);border:1px solid var(--border);border-radius:8px;padding:5px 8px;color:var(--white);font-family:'Plus Jakarta Sans',sans-serif;font-size:12px;outline:none;cursor:pointer;}
+.status-sel option{background:var(--navy2);}
+.date-cell{font-size:11px;color:var(--muted);}
+.view-btn{background:rgba(232,160,32,.1);border:1px solid var(--border);color:var(--gold2);font-size:11px;padding:5px 12px;border-radius:8px;cursor:pointer;font-family:'Plus Jakarta Sans',sans-serif;font-weight:600;}
+.view-btn:hover{background:rgba(232,160,32,.2);}
+.empty-state{text-align:center;padding:48px 20px;color:var(--muted);}
+
+/* MODAL */
+.modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:500;display:flex;align-items:center;justify-content:center;padding:20px;opacity:0;pointer-events:none;transition:opacity .25s;}
+.modal-bg.open{opacity:1;pointer-events:all;}
+.detail-modal{background:var(--navy2);border:1px solid var(--border);border-radius:20px;padding:28px;max-width:500px;width:100%;max-height:85vh;overflow-y:auto;}
+.detail-modal h3{font-family:'Fraunces',serif;font-size:20px;margin-bottom:18px;color:var(--white);}
+.drow{display:flex;gap:10px;margin-bottom:10px;align-items:flex-start;}
+.dlabel{font-size:12px;color:var(--muted);font-weight:600;width:110px;flex-shrink:0;padding-top:2px;}
+.dval{font-size:13px;color:var(--white);word-break:break-all;}
+.dval a{color:var(--gold);text-decoration:none;display:inline-flex;align-items:center;gap:5px;}
+.dval a:hover{text-decoration:underline;}
+.modal-actions{display:flex;flex-direction:column;gap:8px;margin-top:20px;}
+.wa-btn{display:flex;align-items:center;justify-content:center;gap:8px;background:#25D366;color:#fff;font-weight:700;font-size:14px;padding:12px;border-radius:10px;border:none;cursor:pointer;text-decoration:none;font-family:'Plus Jakarta Sans',sans-serif;}
+.close-btn{background:rgba(255,255,255,.06);border:1px solid var(--border);color:var(--muted);font-size:14px;padding:11px;border-radius:10px;cursor:pointer;font-family:'Plus Jakarta Sans',sans-serif;}
+.close-btn:hover{background:rgba(255,255,255,.1);}
+
+@media(max-width:700px){.stats-row{grid-template-columns:1fr 1fr;}.main{padding:14px;} th:nth-child(4),td:nth-child(4),th:nth-child(5),td:nth-child(5){display:none;}}
+</style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div id="loginScreen">
+  <div class="login-box">
+    <h1>ResumeRight</h1>
+    <p>Admin Dashboard — Enter key to continue</p>
+    <input class="login-input" type="password" id="keyInput" placeholder="Admin key" onkeydown="if(event.key==='Enter')adminLogin()"/>
+    <button class="login-btn" onclick="adminLogin()">Access Dashboard →</button>
+    <div class="login-err" id="loginErr"></div>
+  </div>
+</div>
+
+<!-- DASHBOARD -->
+<div id="dashboard">
+  <div class="topbar">
+    <div class="topbar-logo">Resume<span>Right</span></div>
+    <div class="topbar-right">
+      <span class="admin-tag">ADMIN</span>
+      <span class="live-dot"></span>
+      <span class="live-txt">Live</span>
+      <button class="logout-btn" onclick="adminLogout()">Logout</button>
+    </div>
+  </div>
+
+  <div class="main">
+    <!-- STATS -->
+    <div class="stats-row">
+      <div class="stat-card c-total"><div class="stat-label">TOTAL LEADS</div><div class="stat-num" id="s-total">0</div><div class="stat-icon">📊</div></div>
+      <div class="stat-card c-new"><div class="stat-label">NEW</div><div class="stat-num" id="s-new">0</div><div class="stat-icon">✨</div></div>
+      <div class="stat-card c-prog"><div class="stat-label">IN PROGRESS</div><div class="stat-num" id="s-prog">0</div><div class="stat-icon">⚙️</div></div>
+      <div class="stat-card c-done"><div class="stat-label">COMPLETED</div><div class="stat-num" id="s-done">0</div><div class="stat-icon">✅</div></div>
+      <div class="stat-card c-paid"><div class="stat-label">PAID</div><div class="stat-num" id="s-paid">0</div><div class="stat-icon">💰</div></div>
+    </div>
+
+    <!-- LEADS -->
+    <div class="toolbar">
+      <h2>All Leads</h2>
+      <input class="search-input" type="text" id="searchInput" placeholder="Search name, email, phone..." oninput="renderTable()"/>
+      <select class="filter-sel" id="filterStatus" onchange="renderTable()">
+        <option value="">All Status</option>
+        <option>New</option><option>In Progress</option><option>Completed</option><option>Paid</option>
+      </select>
+      <button class="refresh-btn" onclick="loadLeads()">↻ Refresh</button>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>#</th><th>Name / Contact</th><th>Service</th><th>Target / File</th><th>Submitted</th><th>Status</th><th>Action</th></tr></thead>
+        <tbody id="leadsTable"></tbody>
+      </table>
+      <div class="empty-state" id="emptyState" style="display:none"><p>📭 No leads yet.</p></div>
+    </div>
+
+    <!-- USERS -->
+    <div class="toolbar">
+      <h2>Registered Users</h2>
+      <button class="refresh-btn" onclick="loadUsers()">↻ Refresh</button>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>#</th><th>Name</th><th>Email</th><th>Registered On</th></tr></thead>
+        <tbody id="usersTable"></tbody>
+      </table>
+      <div class="empty-state" id="emptyUsers" style="display:none"><p>👤 No users yet.</p></div>
+    </div>
+  </div>
+</div>
+
+<!-- DETAIL MODAL -->
+<div class="modal-bg" id="detailModal" onclick="if(event.target===this)closeModal()">
+  <div class="detail-modal">
+    <h3 id="dm-name">Lead Details</h3>
+    <div class="drow"><div class="dlabel">Phone</div><div class="dval" id="dm-phone">—</div></div>
+    <div class="drow"><div class="dlabel">Email</div><div class="dval" id="dm-email">—</div></div>
+    <div class="drow"><div class="dlabel">Service</div><div class="dval" id="dm-service">—</div></div>
+    <div class="drow"><div class="dlabel">Experience</div><div class="dval" id="dm-exp">—</div></div>
+    <div class="drow"><div class="dlabel">Current Role</div><div class="dval" id="dm-current">—</div></div>
+    <div class="drow"><div class="dlabel">Target Role</div><div class="dval" id="dm-target">—</div></div>
+    <div class="drow"><div class="dlabel">Message</div><div class="dval" id="dm-msg">—</div></div>
+    <div class="drow"><div class="dlabel">Resume File</div><div class="dval" id="dm-resume">—</div></div>
+    <div class="drow"><div class="dlabel">Status</div><div class="dval" id="dm-status">—</div></div>
+    <div class="drow"><div class="dlabel">Submitted</div><div class="dval" id="dm-date">—</div></div>
+    <div class="modal-actions">
+      <a id="dm-wa" href="#" class="wa-btn" target="_blank">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+        WhatsApp this lead
+      </a>
+      <button class="close-btn" onclick="closeModal()">Close</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const API = 'https://d17n9gdtbr01ux.cloudfront.net';
+const ADMIN_KEY = 'resumeright2026';
+let allLeads = [], allUsers = [];
+
+function adminLogin(){
+  const k = document.getElementById('keyInput').value.trim();
+  if(k === ADMIN_KEY){
+    document.getElementById('loginScreen').style.display='none';
+    document.getElementById('dashboard').style.display='block';
+    loadLeads(); loadUsers();
+    setInterval(()=>{loadLeads();loadUsers();}, 30000);
+  } else {
+    document.getElementById('loginErr').textContent='Invalid admin key.';
+  }
+}
+function adminLogout(){
+  document.getElementById('loginScreen').style.display='flex';
+  document.getElementById('dashboard').style.display='none';
+  document.getElementById('keyInput').value='';
+}
+
+async function loadLeads(){
+  try{
+    const r = await fetch(`${API}/admin/leads?key=${ADMIN_KEY}`);
+    const d = await r.json();
+    allLeads = d.leads || [];
+    updateStats(); renderTable();
+  }catch(e){console.error('Leads error:',e);}
+}
+async function loadUsers(){
+  try{
+    const r = await fetch(`${API}/admin/users?key=${ADMIN_KEY}`);
+    const d = await r.json();
+    allUsers = d.users || [];
+    renderUsers();
+  }catch(e){console.error('Users error:',e);}
+}
+
+function updateStats(){
+  document.getElementById('s-total').textContent = allLeads.length;
+  document.getElementById('s-new').textContent = allLeads.filter(l=>l.status==='New'||l.status==='Resume Uploaded').length;
+  document.getElementById('s-prog').textContent = allLeads.filter(l=>l.status==='In Progress').length;
+  document.getElementById('s-done').textContent = allLeads.filter(l=>l.status==='Completed').length;
+  document.getElementById('s-paid').textContent = allLeads.filter(l=>l.status==='Paid').length;
+}
+
+function getSvcClass(svc){
+  if(!svc) return 'svc-upload';
+  const s = svc.toLowerCase();
+  if(s.includes('naukri')) return 'svc-naukri';
+  if(s.includes('linkedin')) return 'svc-linkedin';
+  if(s.includes('bundle')) return 'svc-bundle';
+  if(s.includes('resume') && !s.includes('uploaded')) return 'svc-resume';
+  return 'svc-upload';
+}
+
+function fmtDate(d){
+  if(!d) return '—';
+  try{ return new Date(d).toLocaleString('en-IN',{timeZone:'Asia/Kolkata',day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'}); }
+  catch(e){ return d; }
+}
+
+function renderTable(){
+  const search = document.getElementById('searchInput').value.toLowerCase();
+  const fStatus = document.getElementById('filterStatus').value;
+  const filtered = allLeads.filter(l=>{
+    const ms = !search || (l.name||'').toLowerCase().includes(search) || (l.email||'').toLowerCase().includes(search) || (l.phone||'').toLowerCase().includes(search);
+    const mf = !fStatus || l.status===fStatus;
+    return ms && mf;
+  });
+  const tbody = document.getElementById('leadsTable');
+  const empty = document.getElementById('emptyState');
+  if(!filtered.length){tbody.innerHTML='';empty.style.display='block';return;}
+  empty.style.display='none';
+  const svcLabel = l => l.service || l.pkg || l.originalName || 'Resume Upload';
+  const targetLabel = l => l.target || l.originalName || '—';
+  tbody.innerHTML = filtered.map((l,i)=>`
+    <tr>
+      <td style="color:var(--muted);font-size:12px">${filtered.length-i}</td>
+      <td>
+        <div class="lead-name">${l.name||'—'}</div>
+        <div class="lead-sub">${l.email||''} ${l.phone?'· '+l.phone:''}</div>
+      </td>
+      <td><span class="svc-badge ${getSvcClass(svcLabel(l))}">${svcLabel(l).replace(' — ₹',' ₹').substring(0,28)}</span></td>
+      <td style="font-size:13px;color:var(--muted)">${targetLabel(l)}</td>
+      <td class="date-cell">${fmtDate(l.createdAt||l.submitted||l.uploadedAt)}</td>
+      <td>
+        <select class="status-sel" onchange="updateStatus('${l.id}',this.value)">
+          <option ${l.status==='New'?'selected':''}>New</option>
+          <option ${l.status==='Resume Uploaded'?'selected':''}>Resume Uploaded</option>
+          <option ${l.status==='In Progress'?'selected':''}>In Progress</option>
+          <option ${l.status==='Completed'?'selected':''}>Completed</option>
+          <option ${l.status==='Paid'?'selected':''}>Paid</option>
+        </select>
+      </td>
+      <td><button class="view-btn" onclick="showDetail('${l.id}')">View →</button></td>
+    </tr>
+  `).join('');
+}
+
+function renderUsers(){
+  const tbody = document.getElementById('usersTable');
+  const empty = document.getElementById('emptyUsers');
+  if(!allUsers.length){empty.style.display='block';tbody.innerHTML='';return;}
+  empty.style.display='none';
+  tbody.innerHTML = allUsers.map((u,i)=>`
+    <tr>
+      <td style="color:var(--muted);font-size:12px">${allUsers.length-i}</td>
+      <td><div class="lead-name">${u.name||'—'}</div></td>
+      <td><div class="lead-sub">${u.email||'—'}</div></td>
+      <td class="date-cell">${fmtDate(u.createdAt)}</td>
+    </tr>
+  `).join('');
+}
+
+async function updateStatus(id, status){
+  try{
+    await fetch(`${API}/admin/leads/${id}?key=${ADMIN_KEY}`,{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({status})});
+    const lead = allLeads.find(l=>l.id===id);
+    if(lead) lead.status=status;
+    updateStats();
+  }catch(e){console.error(e);}
+}
+
+function showDetail(id){
+  const l = allLeads.find(l=>l.id===id);
+  if(!l) return;
+  document.getElementById('dm-name').textContent = l.name || 'Lead Details';
+  document.getElementById('dm-phone').textContent = l.phone || '—';
+  document.getElementById('dm-email').textContent = l.email || '—';
+  document.getElementById('dm-service').textContent = l.service || l.pkg || 'Resume Upload';
+  document.getElementById('dm-exp').textContent = l.exp || '—';
+  document.getElementById('dm-current').textContent = l.current || '—';
+  document.getElementById('dm-target').textContent = l.target || '—';
+  document.getElementById('dm-msg').textContent = l.message || '—';
+  document.getElementById('dm-status').textContent = l.status || 'New';
+  document.getElementById('dm-date').textContent = fmtDate(l.createdAt||l.submitted||l.uploadedAt);
+
+  // Resume file link
+  const resumeDiv = document.getElementById('dm-resume');
+  if(l.fileUrl || l.originalName){
+    const url = l.fileUrl || `http://52.66.211.217:5000/uploads/${l.savedAs}`;
+    resumeDiv.innerHTML = `<a href="${url}" target="_blank">📄 ${l.originalName||'View Resume'} ↗</a>`;
+  } else {
+    resumeDiv.textContent = '—';
+  }
+
+  // WhatsApp link
+  const phone = (l.phone||'').replace(/\D/g,'');
+  const svc = l.service || l.pkg || 'career services';
+  const msg = encodeURIComponent(`Hi ${l.name||''}! 👋 I'm from ResumeRight. You enquired about ${svc}. I'd love to help you get more interviews! When can we connect?`);
+  document.getElementById('dm-wa').href = phone ? `https://wa.me/91${phone}?text=${msg}` : `https://wa.me/919731209180`;
+
+  document.getElementById('detailModal').classList.add('open');
+}
+function closeModal(){ document.getElementById('detailModal').classList.remove('open'); }
+</script>
+</body>
+</html>

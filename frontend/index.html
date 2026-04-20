@@ -1,0 +1,795 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>ResumeRight — Career Services Platform</title>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@400;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+<style>
+:root{--navy:#0B1628;--navy2:#0F1F38;--card:#131F32;--gold:#E8A020;--gold2:#F5BC50;--white:#F8F5EE;--muted:#94A3B8;--border:rgba(232,160,32,0.18);--green:#22C55E;--red:#EF4444;--blue:#3B82F6;--purple:#8B5CF6;}
+*{margin:0;padding:0;box-sizing:border-box;}html{scroll-behavior:smooth;}
+body{background:var(--navy);color:var(--white);font-family:'Plus Jakarta Sans',sans-serif;font-size:16px;line-height:1.7;overflow-x:hidden;}
+h1,h2,h3{font-family:'Fraunces',serif;line-height:1.2;}
+@keyframes fadeUp{from{opacity:0;transform:translateY(24px)}to{opacity:1;transform:translateY(0)}}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+
+/* NAV */
+nav{position:fixed;top:0;left:0;right:0;z-index:200;display:flex;align-items:center;justify-content:space-between;padding:14px 6vw;background:rgba(11,22,40,0.95);backdrop-filter:blur(16px);border-bottom:1px solid var(--border);}
+.logo{font-family:'Fraunces',serif;font-size:22px;color:var(--gold);}
+.logo span{color:var(--white);}
+.nav-right{display:flex;align-items:center;gap:12px;}
+.nav-btn{background:transparent;border:1.5px solid var(--border);color:var(--white);font-size:13px;font-weight:600;padding:8px 18px;border-radius:50px;cursor:pointer;transition:all .2s;font-family:'Plus Jakarta Sans',sans-serif;}
+.nav-btn:hover{background:rgba(255,255,255,0.07);}
+.nav-cta{background:var(--gold);color:var(--navy);font-size:13px;font-weight:700;padding:9px 20px;border-radius:50px;border:none;cursor:pointer;font-family:'Plus Jakarta Sans',sans-serif;}
+.user-avatar{width:34px;height:34px;border-radius:50%;background:var(--gold);color:var(--navy);font-weight:700;font-size:13px;display:flex;align-items:center;justify-content:center;cursor:pointer;border:2px solid var(--gold2);}
+
+/* HERO */
+.hero{min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:120px 6vw 80px;position:relative;}
+.hero::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse 80% 60% at 50% 0%,rgba(232,160,32,0.12) 0%,transparent 70%);}
+.badge{display:inline-flex;align-items:center;gap:8px;background:rgba(232,160,32,0.12);border:1px solid var(--border);border-radius:50px;padding:8px 18px;font-size:13px;color:var(--gold2);margin-bottom:28px;animation:fadeUp .6s ease both;}
+.badge-dot{width:7px;height:7px;background:var(--green);border-radius:50%;animation:pulse 2s infinite;}
+.hero h1{font-size:clamp(36px,5.5vw,70px);max-width:860px;margin-bottom:22px;animation:fadeUp .7s .1s ease both;}
+.hero h1 em{font-style:normal;color:var(--gold);}
+.hero p{font-size:clamp(15px,2vw,18px);color:var(--muted);max-width:580px;margin-bottom:40px;animation:fadeUp .7s .2s ease both;}
+.hero-btns{display:flex;gap:14px;flex-wrap:wrap;justify-content:center;animation:fadeUp .7s .3s ease both;}
+.btn-primary{background:var(--gold);color:var(--navy);font-weight:700;font-size:16px;padding:16px 34px;border-radius:50px;text-decoration:none;border:none;cursor:pointer;font-family:'Plus Jakarta Sans',sans-serif;transition:transform .2s,box-shadow .2s;}
+.btn-primary:hover{transform:translateY(-2px);box-shadow:0 12px 32px rgba(232,160,32,.35);}
+.btn-outline{border:1.5px solid var(--border);color:var(--white);font-weight:600;font-size:15px;padding:15px 28px;border-radius:50px;background:transparent;cursor:pointer;font-family:'Plus Jakarta Sans',sans-serif;}
+.hero-stats{display:flex;gap:clamp(20px,4vw,56px);margin-top:56px;padding-top:36px;border-top:1px solid var(--border);flex-wrap:wrap;justify-content:center;position:relative;z-index:1;}
+.stat-num{font-family:'Fraunces',serif;font-size:34px;color:var(--gold);display:block;}
+.stat-label{font-size:13px;color:var(--muted);}
+
+/* SECTIONS */
+section{padding:80px 6vw;}
+.section-tag{font-size:11px;font-weight:700;letter-spacing:2px;color:var(--gold);text-transform:uppercase;margin-bottom:12px;display:block;}
+.section-title{font-size:clamp(26px,4vw,42px);margin-bottom:14px;}
+.section-sub{font-size:15px;color:var(--muted);max-width:600px;}
+.center{text-align:center;display:flex;flex-direction:column;align-items:center;}
+
+/* SERVICES TABS */
+.services-section{background:var(--navy2);}
+.service-tabs{display:flex;gap:8px;margin:32px 0 24px;flex-wrap:wrap;justify-content:center;}
+.svc-tab{padding:10px 20px;border-radius:50px;border:1.5px solid var(--border);background:transparent;color:var(--muted);font-size:13px;font-weight:600;cursor:pointer;transition:all .2s;font-family:'Plus Jakarta Sans',sans-serif;}
+.svc-tab.active{background:var(--gold);color:var(--navy);border-color:var(--gold);}
+.service-panel{display:none;max-width:960px;width:100%;}
+.service-panel.active{display:block;}
+
+/* PACKAGES GRID */
+.pkg-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:18px;margin-top:12px;}
+.pkg{background:var(--card);border:1px solid var(--border);border-radius:20px;padding:28px 24px;position:relative;transition:transform .25s;}
+.pkg:hover{transform:translateY(-4px);}
+.pkg.popular{border-color:var(--gold);}
+.popular-tag{position:absolute;top:-12px;left:50%;transform:translateX(-50%);background:var(--gold);color:var(--navy);font-size:10px;font-weight:700;letter-spacing:1px;padding:5px 16px;border-radius:50px;white-space:nowrap;}
+.pkg-icon{font-size:28px;margin-bottom:12px;}
+.pkg-name{font-family:'Fraunces',serif;font-size:18px;margin-bottom:4px;}
+.pkg-tagline{font-size:12px;color:var(--muted);margin-bottom:14px;}
+.pkg-price{font-family:'Fraunces',serif;font-size:32px;color:var(--gold);line-height:1;margin-bottom:4px;}
+.pkg-price sup{font-size:14px;vertical-align:top;margin-top:6px;display:inline-block;}
+.pkg-period{font-size:12px;color:var(--muted);margin-bottom:16px;}
+.pkg-features{list-style:none;margin-bottom:22px;}
+.pkg-features li{font-size:13px;padding:5px 0;border-bottom:1px solid rgba(255,255,255,.05);display:flex;align-items:flex-start;gap:8px;line-height:1.4;}
+.pkg-features li:last-child{border:none;}
+.check{color:var(--green);flex-shrink:0;margin-top:2px;}
+.pkg-btn{display:block;text-align:center;padding:12px;border-radius:50px;font-weight:600;font-size:14px;cursor:pointer;border:none;font-family:'Plus Jakarta Sans',sans-serif;width:100%;transition:all .2s;}
+.pkg-btn-outline{background:transparent;border:1.5px solid var(--border);color:var(--white);}
+.pkg-btn-filled{background:var(--gold);color:var(--navy);}
+.pkg-btn-filled:hover{opacity:.88;}
+.service-desc{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:24px;margin-bottom:20px;display:flex;gap:16px;align-items:flex-start;}
+.svc-icon-big{font-size:36px;flex-shrink:0;}
+.svc-title{font-family:'Fraunces',serif;font-size:20px;margin-bottom:6px;}
+.svc-text{font-size:14px;color:var(--muted);line-height:1.6;}
+
+/* REVIEWS */
+.reviews-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(270px,1fr));gap:18px;margin-top:48px;max-width:960px;width:100%;}
+.review-card{background:var(--card);border:1px solid var(--border);border-radius:18px;padding:24px;}
+.stars{color:var(--gold);font-size:14px;margin-bottom:12px;letter-spacing:2px;}
+.review-text{font-size:13px;line-height:1.7;margin-bottom:18px;font-style:italic;}
+.reviewer{display:flex;align-items:center;gap:10px;}
+.avatar{width:38px;height:38px;border-radius:50%;background:var(--navy2);border:2px solid var(--border);display:flex;align-items:center;justify-content:center;font-family:'Fraunces',serif;font-size:13px;color:var(--gold);flex-shrink:0;}
+.reviewer-name{font-weight:600;font-size:13px;}
+.reviewer-role{font-size:11px;color:var(--muted);}
+.svc-badge{display:inline-block;font-size:10px;font-weight:700;padding:2px 8px;border-radius:10px;margin-left:6px;background:rgba(232,160,32,0.15);color:var(--gold2);}
+
+/* FAQ */
+.faq-section{background:var(--navy2);}
+.faq-list{max-width:720px;width:100%;margin-top:40px;}
+.faq-item{border:1px solid var(--border);border-radius:12px;margin-bottom:10px;overflow:hidden;}
+.faq-q{padding:16px 20px;cursor:pointer;display:flex;justify-content:space-between;align-items:center;font-weight:600;font-size:14px;background:var(--card);}
+.faq-icon{color:var(--gold);font-size:18px;transition:transform .3s;flex-shrink:0;}
+.faq-a{max-height:0;overflow:hidden;transition:max-height .3s,padding .3s;font-size:13px;color:var(--muted);background:var(--card);padding:0 20px;}
+.faq-item.open .faq-a{max-height:200px;padding:0 20px 16px;}
+.faq-item.open .faq-icon{transform:rotate(45deg);}
+
+/* TRUST BAR */
+.trust-bar{background:var(--card);border-top:1px solid var(--border);border-bottom:1px solid var(--border);padding:18px 6vw;}
+.trust-inner{display:flex;gap:28px;justify-content:center;flex-wrap:wrap;align-items:center;}
+.ti{font-size:13px;color:var(--muted);display:flex;align-items:center;gap:7px;}
+.ti-check{color:var(--green);}
+
+/* FORM */
+.form-section{border-top:1px solid var(--border);}
+.form-box{background:var(--card);border:1px solid var(--border);border-radius:24px;padding:44px 38px;max-width:680px;width:100%;margin:0 auto;}
+.form-box h2{font-size:clamp(22px,3.5vw,34px);margin-bottom:6px;text-align:center;}
+.form-sub{color:var(--muted);margin-bottom:28px;font-size:14px;text-align:center;}
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px;}
+.form-group{display:flex;flex-direction:column;gap:6px;}
+.form-group.full{grid-column:1/-1;}
+.form-group label{font-size:12px;font-weight:600;color:var(--muted);letter-spacing:.4px;}
+.form-group input,.form-group select,.form-group textarea{background:rgba(255,255,255,.05);border:1px solid var(--border);border-radius:10px;padding:11px 14px;color:var(--white);font-family:'Plus Jakarta Sans',sans-serif;font-size:13px;outline:none;transition:border-color .2s;}
+.form-group input:focus,.form-group select:focus,.form-group textarea:focus{border-color:var(--gold);}
+.form-group input::placeholder,.form-group textarea::placeholder{color:rgba(148,163,184,.5);}
+.form-group select option{background:var(--navy2);}
+.submit-btn{width:100%;background:var(--gold);color:var(--navy);font-weight:700;font-size:15px;padding:15px;border-radius:50px;border:none;cursor:pointer;margin-top:8px;font-family:'Plus Jakarta Sans',sans-serif;transition:opacity .2s;}
+.submit-btn:hover{opacity:.88;}
+.form-success{display:none;text-align:center;padding:20px 0;}
+.form-success .tick{font-size:44px;margin-bottom:10px;}
+.form-success h3{font-family:'Fraunces',serif;font-size:22px;color:var(--green);margin-bottom:8px;}
+.wa-btn-link{display:inline-flex;align-items:center;gap:10px;background:#25D366;color:#fff;font-weight:600;font-size:14px;padding:12px 26px;border-radius:50px;text-decoration:none;margin-top:16px;}
+.or-div{text-align:center;color:var(--muted);font-size:12px;margin:16px 0;position:relative;}
+.or-div::before,.or-div::after{content:'';position:absolute;top:50%;width:44%;height:1px;background:var(--border);}
+.or-div::before{left:0;}.or-div::after{right:0;}
+.bot-trust{display:flex;gap:14px;justify-content:center;margin-top:20px;flex-wrap:wrap;}
+.bt-item{font-size:12px;color:var(--muted);display:flex;align-items:center;gap:5px;}
+
+/* UPLOAD */
+.upload-section{display:none;background:var(--navy2);border-top:1px solid var(--border);padding:60px 6vw;}
+.upload-box{background:var(--card);border:2px dashed var(--border);border-radius:20px;padding:44px;max-width:560px;margin:0 auto;text-align:center;cursor:pointer;transition:border-color .2s;}
+.upload-box:hover{border-color:var(--gold);}
+.upload-btn{background:var(--gold);color:var(--navy);font-weight:700;font-size:14px;padding:12px 28px;border-radius:50px;border:none;cursor:pointer;font-family:'Plus Jakarta Sans',sans-serif;}
+.progress-bar{height:6px;background:rgba(255,255,255,.1);border-radius:10px;overflow:hidden;margin-top:10px;}
+.progress-fill{height:100%;background:var(--gold);border-radius:10px;width:0;transition:width .5s;}
+
+/* MODAL */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:500;display:flex;align-items:center;justify-content:center;padding:20px;opacity:0;pointer-events:none;transition:opacity .3s;}
+.modal-overlay.open{opacity:1;pointer-events:all;}
+.modal{background:var(--navy2);border:1px solid var(--border);border-radius:20px;padding:32px;max-width:420px;width:100%;position:relative;}
+.modal-close{position:absolute;top:14px;right:16px;background:none;border:none;color:var(--muted);font-size:22px;cursor:pointer;}
+.modal h2{font-size:22px;margin-bottom:4px;}
+.modal p{font-size:13px;color:var(--muted);margin-bottom:22px;}
+.modal-tabs{display:flex;gap:6px;margin-bottom:20px;background:rgba(255,255,255,.04);border-radius:10px;padding:4px;}
+.modal-tab{flex:1;padding:8px;border-radius:8px;border:none;background:transparent;color:var(--muted);font-size:13px;font-weight:600;cursor:pointer;font-family:'Plus Jakarta Sans',sans-serif;}
+.modal-tab.active{background:var(--gold);color:var(--navy);}
+.modal-input{background:rgba(255,255,255,.05);border:1px solid var(--border);border-radius:10px;padding:12px 14px;color:var(--white);font-family:'Plus Jakarta Sans',sans-serif;font-size:14px;outline:none;width:100%;margin-bottom:10px;}
+.modal-input:focus{border-color:var(--gold);}
+.modal-input::placeholder{color:rgba(148,163,184,.5);}
+.modal-submit{background:var(--gold);color:var(--navy);font-weight:700;font-size:15px;padding:13px;border-radius:50px;border:none;cursor:pointer;font-family:'Plus Jakarta Sans',sans-serif;width:100%;}
+.modal-msg{font-size:12px;text-align:center;min-height:18px;margin-top:8px;}
+.modal-msg.success{color:var(--green);}.modal-msg.error{color:var(--red);}
+
+/* CHAT */
+.chat-fab{position:fixed;bottom:28px;right:28px;width:56px;height:56px;border-radius:50%;background:var(--gold);border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:22px;box-shadow:0 8px 24px rgba(232,160,32,.4);z-index:400;transition:transform .2s;}
+.chat-fab:hover{transform:scale(1.08);}
+.chat-notif{position:absolute;top:-4px;right:-4px;width:16px;height:16px;background:var(--red);border-radius:50%;font-size:9px;font-weight:700;display:flex;align-items:center;justify-content:center;color:#fff;border:2px solid var(--navy);}
+.chat-panel{position:fixed;bottom:96px;right:28px;width:320px;height:460px;background:var(--navy2);border:1px solid var(--border);border-radius:20px;display:flex;flex-direction:column;z-index:400;transform:translateY(20px) scale(.95);opacity:0;pointer-events:none;transition:all .3s;box-shadow:0 20px 60px rgba(0,0,0,.5);}
+.chat-panel.open{transform:translateY(0) scale(1);opacity:1;pointer-events:all;}
+.chat-header{padding:14px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px;flex-shrink:0;}
+.chat-avatar{width:34px;height:34px;border-radius:50%;background:var(--gold);display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0;}
+.chat-name{font-weight:700;font-size:13px;}
+.chat-status{font-size:11px;color:var(--green);}
+.chat-close{margin-left:auto;background:none;border:none;color:var(--muted);font-size:16px;cursor:pointer;}
+.chat-msgs{flex:1;overflow-y:auto;padding:14px;display:flex;flex-direction:column;gap:8px;}
+.msg{max-width:82%;font-size:12.5px;line-height:1.5;padding:9px 12px;border-radius:12px;}
+.msg.bot{background:var(--card);border:1px solid var(--border);align-self:flex-start;border-radius:4px 12px 12px 12px;}
+.msg.user{background:var(--gold);color:var(--navy);align-self:flex-end;font-weight:500;border-radius:12px 12px 4px 12px;}
+.chat-sugs{padding:8px 14px;display:flex;flex-wrap:wrap;gap:5px;flex-shrink:0;}
+.sug{background:rgba(232,160,32,.1);border:1px solid var(--border);color:var(--gold2);font-size:11px;padding:4px 9px;border-radius:16px;cursor:pointer;font-family:'Plus Jakarta Sans',sans-serif;}
+.chat-inp-row{padding:10px 14px;border-top:1px solid var(--border);display:flex;gap:6px;flex-shrink:0;}
+.chat-inp{flex:1;background:rgba(255,255,255,.05);border:1px solid var(--border);border-radius:18px;padding:8px 12px;color:var(--white);font-family:'Plus Jakarta Sans',sans-serif;font-size:12px;outline:none;}
+.chat-inp:focus{border-color:var(--gold);}
+.chat-send{background:var(--gold);color:var(--navy);border:none;border-radius:50%;width:30px;height:30px;cursor:pointer;font-size:12px;font-weight:700;flex-shrink:0;}
+
+footer{padding:28px 6vw;text-align:center;border-top:1px solid var(--border);}
+
+@media(max-width:700px){.form-grid{grid-template-columns:1fr;}.pkg-grid{grid-template-columns:1fr;}.hero-btns{flex-direction:column;align-items:center;}.form-box{padding:28px 18px;}.chat-panel{width:calc(100vw - 32px);right:16px;}}
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="logo">Resume<span>Right</span></div>
+  <div class="nav-right">
+    <button class="nav-btn" id="loginBtn" onclick="openModal('login')">Login</button>
+    <button class="nav-cta" onclick="openModal('register')">Get Started</button>
+    <div class="user-avatar" id="userAvatar" style="display:none" onclick="logout()">?</div>
+  </div>
+</nav>
+
+<!-- HERO -->
+<section class="hero">
+  <div class="badge"><span class="badge-dot"></span>India's #1 Career Services Platform</div>
+  <h1>Land Your <em>Dream Job</em> — We Handle Everything</h1>
+  <p>ATS Resumes · Naukri Profile Optimization · LinkedIn Branding · Daily Job Applications — complete career management in one place.</p>
+  <div class="hero-btns">
+    <button class="btn-primary" onclick="document.getElementById('services').scrollIntoView({behavior:'smooth'})">View All Services →</button>
+    <button class="btn-outline" onclick="document.getElementById('contact').scrollIntoView({behavior:'smooth'})">Talk to Expert</button>
+  </div>
+  <div class="hero-stats">
+    <div><span class="stat-num">500+</span><span class="stat-label">Clients placed</span></div>
+    <div><span class="stat-num">98%</span><span class="stat-label">ATS pass rate</span></div>
+    <div><span class="stat-num">3×</span><span class="stat-label">More callbacks</span></div>
+    <div><span class="stat-num">4.9★</span><span class="stat-label">Average rating</span></div>
+  </div>
+</section>
+
+<!-- TRUST BAR -->
+<div class="trust-bar">
+  <div class="trust-inner">
+    <div class="ti"><span class="ti-check">✓</span>Pay after preview</div>
+    <div class="ti"><span class="ti-check">✓</span>UPI / GPay accepted</div>
+    <div class="ti"><span class="ti-check">✓</span>100% satisfaction</div>
+    <div class="ti"><span class="ti-check">✓</span>Revision guarantee</div>
+    <div class="ti"><span class="ti-check">✓</span>Trusted by 500+ professionals</div>
+    <div class="ti"><span class="ti-check">✓</span>24–72h delivery</div>
+  </div>
+</div>
+
+<!-- SERVICES & PACKAGES -->
+<section id="services" class="services-section center">
+  <span class="section-tag">Our Services</span>
+  <h2 class="section-title">Everything You Need to Get Hired</h2>
+  <p class="section-sub">Choose the service that fits your career goal — or bundle them all for maximum results.</p>
+
+  <div class="service-tabs">
+    <button class="svc-tab active" onclick="showService('resume')">📄 ATS Resume</button>
+    <button class="svc-tab" onclick="showService('naukri')">🔍 Naukri Profile</button>
+    <button class="svc-tab" onclick="showService('linkedin')">💼 LinkedIn</button>
+    <button class="svc-tab" onclick="showService('bundle')">🚀 Career Bundle</button>
+  </div>
+
+  <!-- RESUME PACKAGES -->
+  <div class="service-panel active" id="panel-resume">
+    <div class="service-desc">
+      <div class="svc-icon-big">📄</div>
+      <div>
+        <div class="svc-title">ATS-Optimized Resume Writing</div>
+        <div class="svc-text">75% of resumes are auto-rejected by ATS bots before a human reads them. We craft keyword-optimized, clean resumes that pass every filter and land you interviews — fast.</div>
+      </div>
+    </div>
+    <div class="pkg-grid">
+      <div class="pkg">
+        <div class="pkg-icon">📝</div>
+        <div class="pkg-name">Basic</div>
+        <div class="pkg-tagline">Freshers & early-career</div>
+        <div class="pkg-price"><sup>₹</sup>999</div>
+        <div class="pkg-period">one-time</div>
+        <ul class="pkg-features">
+          <li><span class="check">✓</span>ATS-optimized PDF resume</li>
+          <li><span class="check">✓</span>Professional clean formatting</li>
+          <li><span class="check">✓</span>Keyword match for 1 target role</li>
+          <li><span class="check">✓</span>1 revision · 48h delivery</li>
+        </ul>
+        <button class="pkg-btn pkg-btn-outline" onclick="selectPackage('ATS Resume Basic — ₹999')">Get Started →</button>
+      </div>
+      <div class="pkg popular">
+        <div class="popular-tag">⭐ MOST POPULAR</div>
+        <div class="pkg-icon">🎯</div>
+        <div class="pkg-name">Professional</div>
+        <div class="pkg-tagline">Mid-level job switchers</div>
+        <div class="pkg-price"><sup>₹</sup>1,999</div>
+        <div class="pkg-period">one-time</div>
+        <ul class="pkg-features">
+          <li><span class="check">✓</span>Everything in Basic</li>
+          <li><span class="check">✓</span>Cover letter included</li>
+          <li><span class="check">✓</span>LinkedIn summary rewrite</li>
+          <li><span class="check">✓</span>Keywords for 3 target roles</li>
+          <li><span class="check">✓</span>2 revisions · 36h delivery</li>
+        </ul>
+        <button class="pkg-btn pkg-btn-filled" onclick="selectPackage('ATS Resume Professional — ₹1,999')">Get Started →</button>
+      </div>
+      <div class="pkg">
+        <div class="pkg-icon">👑</div>
+        <div class="pkg-name">Premium</div>
+        <div class="pkg-tagline">Senior & career changers</div>
+        <div class="pkg-price"><sup>₹</sup>3,499</div>
+        <div class="pkg-period">one-time</div>
+        <ul class="pkg-features">
+          <li><span class="check">✓</span>Everything in Professional</li>
+          <li><span class="check">✓</span>Tailored for 5 job descriptions</li>
+          <li><span class="check">✓</span>Interview prep tips sheet</li>
+          <li><span class="check">✓</span>Unlimited revisions (7 days)</li>
+          <li><span class="check">✓</span>Priority 24h · 30-day update</li>
+        </ul>
+        <button class="pkg-btn pkg-btn-outline" onclick="selectPackage('ATS Resume Premium — ₹3,499')">Get Started →</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- NAUKRI PACKAGES -->
+  <div class="service-panel" id="panel-naukri">
+    <div class="service-desc">
+      <div class="svc-icon-big">🔍</div>
+      <div>
+        <div class="svc-title">Naukri Profile Optimization & Management</div>
+        <div class="svc-text">A fully optimized Naukri profile gets 5× more recruiter views. We optimize your headline, key skills, summary, and provide daily profile updates to keep you at the top of search results.</div>
+      </div>
+    </div>
+    <div class="pkg-grid">
+      <div class="pkg">
+        <div class="pkg-icon">✏️</div>
+        <div class="pkg-name">One-Time Setup</div>
+        <div class="pkg-tagline">Profile overhaul</div>
+        <div class="pkg-price"><sup>₹</sup>799</div>
+        <div class="pkg-period">one-time</div>
+        <ul class="pkg-features">
+          <li><span class="check">✓</span>Complete profile rewrite</li>
+          <li><span class="check">✓</span>Optimized headline & summary</li>
+          <li><span class="check">✓</span>25+ relevant key skills added</li>
+          <li><span class="check">✓</span>Industry-matched keywords</li>
+          <li><span class="check">✓</span>Photo & visibility settings</li>
+        </ul>
+        <button class="pkg-btn pkg-btn-outline" onclick="selectPackage('Naukri One-Time Setup — ₹799')">Get Started →</button>
+      </div>
+      <div class="pkg popular">
+        <div class="popular-tag">🔥 BEST VALUE</div>
+        <div class="pkg-icon">📅</div>
+        <div class="pkg-name">Monthly Management</div>
+        <div class="pkg-tagline">Stay at top of search</div>
+        <div class="pkg-price"><sup>₹</sup>1,499</div>
+        <div class="pkg-period">per month</div>
+        <ul class="pkg-features">
+          <li><span class="check">✓</span>Everything in Setup</li>
+          <li><span class="check">✓</span>Daily profile refresh/update</li>
+          <li><span class="check">✓</span>Weekly keyword optimization</li>
+          <li><span class="check">✓</span>Job alert configuration</li>
+          <li><span class="check">✓</span>Monthly performance report</li>
+          <li><span class="check">✓</span>Apply to 20 jobs/week for you</li>
+        </ul>
+        <button class="pkg-btn pkg-btn-filled" onclick="selectPackage('Naukri Monthly Management — ₹1,499/mo')">Get Started →</button>
+      </div>
+      <div class="pkg">
+        <div class="pkg-icon">⚡</div>
+        <div class="pkg-name">3-Month Power Plan</div>
+        <div class="pkg-tagline">Serious job seekers</div>
+        <div class="pkg-price"><sup>₹</sup>3,999</div>
+        <div class="pkg-period">3 months</div>
+        <ul class="pkg-features">
+          <li><span class="check">✓</span>Everything in Monthly</li>
+          <li><span class="check">✓</span>Daily applications (30+/week)</li>
+          <li><span class="check">✓</span>Interview slot management</li>
+          <li><span class="check">✓</span>Dedicated account manager</li>
+          <li><span class="check">✓</span>Save ₹500 vs monthly</li>
+        </ul>
+        <button class="pkg-btn pkg-btn-outline" onclick="selectPackage('Naukri 3-Month Power Plan — ₹3,999')">Get Started →</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- LINKEDIN PACKAGES -->
+  <div class="service-panel" id="panel-linkedin">
+    <div class="service-desc">
+      <div class="svc-icon-big">💼</div>
+      <div>
+        <div class="svc-title">LinkedIn Profile Optimization & Branding</div>
+        <div class="svc-text">LinkedIn is where recruiters find you. A keyword-rich, compelling profile with an All-Star rating gets 40× more recruiter messages. We make your profile impossible to ignore.</div>
+      </div>
+    </div>
+    <div class="pkg-grid">
+      <div class="pkg">
+        <div class="pkg-icon">🖊️</div>
+        <div class="pkg-name">Profile Makeover</div>
+        <div class="pkg-tagline">One-time optimization</div>
+        <div class="pkg-price"><sup>₹</sup>999</div>
+        <div class="pkg-period">one-time</div>
+        <ul class="pkg-features">
+          <li><span class="check">✓</span>Headline & about rewrite</li>
+          <li><span class="check">✓</span>Experience section optimization</li>
+          <li><span class="check">✓</span>Skills & endorsement strategy</li>
+          <li><span class="check">✓</span>Banner & profile photo advice</li>
+          <li><span class="check">✓</span>All-Star rating achievement</li>
+        </ul>
+        <button class="pkg-btn pkg-btn-outline" onclick="selectPackage('LinkedIn Profile Makeover — ₹999')">Get Started →</button>
+      </div>
+      <div class="pkg popular">
+        <div class="popular-tag">⭐ RECOMMENDED</div>
+        <div class="pkg-icon">📣</div>
+        <div class="pkg-name">Growth Package</div>
+        <div class="pkg-tagline">Profile + active presence</div>
+        <div class="pkg-price"><sup>₹</sup>2,499</div>
+        <div class="pkg-period">one-time</div>
+        <ul class="pkg-features">
+          <li><span class="check">✓</span>Everything in Makeover</li>
+          <li><span class="check">✓</span>5 custom posts written for you</li>
+          <li><span class="check">✓</span>Connection strategy (500+)</li>
+          <li><span class="check">✓</span>Recruiter outreach templates</li>
+          <li><span class="check">✓</span>SSI score improvement plan</li>
+        </ul>
+        <button class="pkg-btn pkg-btn-filled" onclick="selectPackage('LinkedIn Growth Package — ₹2,499')">Get Started →</button>
+      </div>
+      <div class="pkg">
+        <div class="pkg-icon">🌟</div>
+        <div class="pkg-name">Monthly Branding</div>
+        <div class="pkg-tagline">Ongoing presence</div>
+        <div class="pkg-price"><sup>₹</sup>1,999</div>
+        <div class="pkg-period">per month</div>
+        <ul class="pkg-features">
+          <li><span class="check">✓</span>4 posts per month</li>
+          <li><span class="check">✓</span>Profile kept updated</li>
+          <li><span class="check">✓</span>Engage with recruiters</li>
+          <li><span class="check">✓</span>Weekly analytics report</li>
+          <li><span class="check">✓</span>Job application via LinkedIn</li>
+        </ul>
+        <button class="pkg-btn pkg-btn-outline" onclick="selectPackage('LinkedIn Monthly Branding — ₹1,999/mo')">Get Started →</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- BUNDLE PACKAGES -->
+  <div class="service-panel" id="panel-bundle">
+    <div class="service-desc">
+      <div class="svc-icon-big">🚀</div>
+      <div>
+        <div class="svc-title">Complete Career Bundle — Best Value</div>
+        <div class="svc-text">Get everything in one plan. Resume + Naukri + LinkedIn — fully managed. The fastest path from job seeker to hired. Our clients land jobs 3× faster with bundles.</div>
+      </div>
+    </div>
+    <div class="pkg-grid">
+      <div class="pkg">
+        <div class="pkg-icon">📦</div>
+        <div class="pkg-name">Starter Bundle</div>
+        <div class="pkg-tagline">Freshers & 0–2 yrs exp</div>
+        <div class="pkg-price"><sup>₹</sup>1,999</div>
+        <div class="pkg-period">one-time · save ₹798</div>
+        <ul class="pkg-features">
+          <li><span class="check">✓</span>ATS Resume (Basic)</li>
+          <li><span class="check">✓</span>Naukri Profile Setup</li>
+          <li><span class="check">✓</span>LinkedIn Makeover</li>
+          <li><span class="check">✓</span>Job application guide</li>
+        </ul>
+        <button class="pkg-btn pkg-btn-outline" onclick="selectPackage('Starter Bundle — ₹1,999')">Get Started →</button>
+      </div>
+      <div class="pkg popular">
+        <div class="popular-tag">🏆 BEST SELLER</div>
+        <div class="pkg-icon">🎖️</div>
+        <div class="pkg-name">Pro Bundle</div>
+        <div class="pkg-tagline">2–8 yrs exp job switchers</div>
+        <div class="pkg-price"><sup>₹</sup>4,999</div>
+        <div class="pkg-period">one-time + 1 month mgmt · save ₹1,497</div>
+        <ul class="pkg-features">
+          <li><span class="check">✓</span>ATS Resume (Professional)</li>
+          <li><span class="check">✓</span>Naukri Setup + 1 month management</li>
+          <li><span class="check">✓</span>LinkedIn Growth Package</li>
+          <li><span class="check">✓</span>Cover letter + interview tips</li>
+          <li><span class="check">✓</span>Dedicated account manager</li>
+        </ul>
+        <button class="pkg-btn pkg-btn-filled" onclick="selectPackage('Pro Bundle — ₹4,999')">Get Started →</button>
+      </div>
+      <div class="pkg">
+        <div class="pkg-icon">💎</div>
+        <div class="pkg-name">Elite Bundle</div>
+        <div class="pkg-tagline">Senior / career change</div>
+        <div class="pkg-price"><sup>₹</sup>9,999</div>
+        <div class="pkg-period">3 months fully managed · save ₹3,496</div>
+        <ul class="pkg-features">
+          <li><span class="check">✓</span>ATS Resume (Premium)</li>
+          <li><span class="check">✓</span>Naukri 3-Month Power Plan</li>
+          <li><span class="check">✓</span>LinkedIn Monthly Branding (3mo)</li>
+          <li><span class="check">✓</span>Daily job applications on your behalf</li>
+          <li><span class="check">✓</span>Interview coaching (2 sessions)</li>
+          <li><span class="check">✓</span>Salary negotiation guide</li>
+        </ul>
+        <button class="pkg-btn pkg-btn-outline" onclick="selectPackage('Elite Bundle — ₹9,999')">Get Started →</button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- UPLOAD (after login) -->
+<section class="upload-section center" id="uploadSection">
+  <span class="section-tag">My Dashboard</span>
+  <h2 class="section-title" style="margin-bottom:8px;">Upload Your Resume</h2>
+  <p style="color:var(--muted);font-size:14px;margin-bottom:28px;">Upload your current resume and we'll build your ATS version.</p>
+  <div class="upload-box" onclick="document.getElementById('fileInput').click()">
+    <div style="font-size:40px;margin-bottom:12px;">📄</div>
+    <h3 style="font-family:'Fraunces',serif;font-size:18px;margin-bottom:8px;">Drop your resume here</h3>
+    <p style="color:var(--muted);font-size:13px;margin-bottom:18px;">PDF, DOC, DOCX — Max 5MB</p>
+    <button class="upload-btn" onclick="event.stopPropagation();document.getElementById('fileInput').click()">Browse File</button>
+    <input type="file" id="fileInput" accept=".pdf,.doc,.docx" style="display:none" onchange="handleUpload(this)"/>
+    <div id="uploadProgress" style="display:none;margin-top:16px;">
+      <p style="font-size:13px;color:var(--muted);margin-bottom:6px;">Uploading...</p>
+      <div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
+    </div>
+    <div id="uploadDone" style="display:none;color:var(--green);font-size:14px;font-weight:600;margin-top:14px;">✅ Uploaded! We'll reach out within 2 hours.</div>
+  </div>
+</section>
+
+<!-- REVIEWS -->
+<section id="reviews" class="center">
+  <span class="section-tag">Testimonials</span>
+  <h2 class="section-title">Real People. Real Results.</h2>
+  <div class="reviews-grid">
+    <div class="review-card"><div class="stars">★★★★★</div><p class="review-text">"Got 4 interview calls in 2 weeks after zero callbacks for 3 months. The ATS resume made all the difference."</p><div class="reviewer"><div class="avatar">RK</div><div><div class="reviewer-name">Rahul K. <span class="svc-badge">ATS Resume</span></div><div class="reviewer-role">Software Engineer, Bengaluru</div></div></div></div>
+    <div class="review-card"><div class="stars">★★★★★</div><p class="review-text">"My Naukri profile views went from 10/week to 80/week after optimization. Got 3 offers in a month!"</p><div class="reviewer"><div class="avatar">PS</div><div><div class="reviewer-name">Priya S. <span class="svc-badge">Naukri</span></div><div class="reviewer-role">Business Analyst, Pune</div></div></div></div>
+    <div class="review-card"><div class="stars">★★★★★</div><p class="review-text">"2 recruiter messages on LinkedIn within a week of the makeover. Landed a 40% salary hike!"</p><div class="reviewer"><div class="avatar">AM</div><div><div class="reviewer-name">Arjun M. <span class="svc-badge">LinkedIn</span></div><div class="reviewer-role">DevOps Engineer, Hyderabad</div></div></div></div>
+    <div class="review-card"><div class="stars">★★★★★</div><p class="review-text">"The Pro Bundle was worth every rupee. Resume + Naukri + LinkedIn — all done in 3 days. Hired in 3 weeks!"</p><div class="reviewer"><div class="avatar">NK</div><div><div class="reviewer-name">Neha K. <span class="svc-badge">Bundle</span></div><div class="reviewer-role">Product Manager, Mumbai</div></div></div></div>
+    <div class="review-card"><div class="stars">★★★★★</div><p class="review-text">"They apply to jobs on my behalf daily. I just attend interviews now. Best decision ever!"</p><div class="reviewer"><div class="avatar">VS</div><div><div class="reviewer-name">Vikram S. <span class="svc-badge">Naukri Monthly</span></div><div class="reviewer-role">Data Analyst, Chennai</div></div></div></div>
+    <div class="review-card"><div class="stars">★★★★★</div><p class="review-text">"From 0 to All-Star on LinkedIn in one day. Got shortlisted by MNCs I never even applied to!"</p><div class="reviewer"><div class="avatar">DG</div><div><div class="reviewer-name">Divya G. <span class="svc-badge">LinkedIn</span></div><div class="reviewer-role">Java Developer, Bengaluru</div></div></div></div>
+  </div>
+</section>
+
+<!-- FAQ -->
+<section class="faq-section center">
+  <span class="section-tag">FAQ</span>
+  <h2 class="section-title">Common Questions</h2>
+  <div class="faq-list">
+    <div class="faq-item"><div class="faq-q" onclick="toggleFaq(this)">What is ATS and why does it matter? <span class="faq-icon">+</span></div><div class="faq-a">ATS (Applicant Tracking System) auto-rejects 75% of resumes before a human reads them. Without ATS optimization, you could be perfect for a role but never get a call.</div></div>
+    <div class="faq-item"><div class="faq-q" onclick="toggleFaq(this)">How does Naukri daily profile update work? <span class="faq-icon">+</span></div><div class="faq-a">Naukri's algorithm shows recently active profiles first. We log in daily and refresh your profile, update key skills, and tweak your resume to keep you at the top of recruiter searches.</div></div>
+    <div class="faq-item"><div class="faq-q" onclick="toggleFaq(this)">Do you apply to jobs on my behalf? <span class="faq-icon">+</span></div><div class="faq-a">Yes! In our Monthly and Power plans, we actively apply to relevant jobs on your behalf daily on Naukri and LinkedIn. You just attend the interviews.</div></div>
+    <div class="faq-item"><div class="faq-q" onclick="toggleFaq(this)">How long does it take to see results? <span class="faq-icon">+</span></div><div class="faq-a">Resume: first callbacks in 3–7 days. Naukri: profile views increase in 24–48h. LinkedIn: recruiter messages within a week. Bundle clients typically get interviews in 2–3 weeks.</div></div>
+    <div class="faq-item"><div class="faq-q" onclick="toggleFaq(this)">How do I pay? Is it safe? <span class="faq-icon">+</span></div><div class="faq-a">We accept UPI, GPay, PhonePe, and bank transfer. You pay ONLY after you see and approve the resume/profile — zero upfront risk.</div></div>
+    <div class="faq-item"><div class="faq-q" onclick="toggleFaq(this)">Can I upgrade my plan later? <span class="faq-icon">+</span></div><div class="faq-a">Yes! Start with any plan and upgrade anytime. We'll credit your existing payment toward the higher plan.</div></div>
+  </div>
+</section>
+
+<!-- CONTACT FORM -->
+<section id="contact" class="form-section center">
+  <div class="form-box">
+    <span class="section-tag" style="display:block;text-align:center;">Get Started Today</span>
+    <h2>Ready to Land Your Dream Job?</h2>
+    <p class="form-sub">Fill in your details and we'll reach out within 2 hours.</p>
+    <div id="form-area">
+      <div class="form-grid">
+        <div class="form-group"><label>Full Name *</label><input type="text" id="f-name" placeholder="Rahul Kumar"/></div>
+        <div class="form-group"><label>Phone Number *</label><input type="tel" id="f-phone" placeholder="+91 98765 43210"/></div>
+        <div class="form-group"><label>Email Address *</label><input type="email" id="f-email" placeholder="rahul@gmail.com"/></div>
+        <div class="form-group"><label>Years of Experience</label>
+          <select id="f-exp"><option value="">Select...</option><option>Fresher (0 years)</option><option>1–2 years</option><option>3–5 years</option><option>6–10 years</option><option>10+ years</option></select>
+        </div>
+        <div class="form-group"><label>Current Role</label><input type="text" id="f-current" placeholder="e.g. Software Engineer"/></div>
+        <div class="form-group"><label>Target Role</label><input type="text" id="f-target" placeholder="e.g. Senior DevOps Engineer"/></div>
+        <div class="form-group full"><label>Service Interested In *</label>
+          <select id="f-service">
+            <option value="">Select a service...</option>
+            <optgroup label="ATS Resume">
+              <option>ATS Resume Basic — ₹999</option>
+              <option>ATS Resume Professional — ₹1,999</option>
+              <option>ATS Resume Premium — ₹3,499</option>
+            </optgroup>
+            <optgroup label="Naukri Profile">
+              <option>Naukri One-Time Setup — ₹799</option>
+              <option>Naukri Monthly Management — ₹1,499/mo</option>
+              <option>Naukri 3-Month Power Plan — ₹3,999</option>
+            </optgroup>
+            <optgroup label="LinkedIn">
+              <option>LinkedIn Profile Makeover — ₹999</option>
+              <option>LinkedIn Growth Package — ₹2,499</option>
+              <option>LinkedIn Monthly Branding — ₹1,999/mo</option>
+            </optgroup>
+            <optgroup label="Bundles (Best Value)">
+              <option>Starter Bundle — ₹1,999</option>
+              <option>Pro Bundle — ₹4,999</option>
+              <option>Elite Bundle — ₹9,999</option>
+            </optgroup>
+            <option>Not sure yet — need consultation</option>
+          </select>
+        </div>
+        <div class="form-group full"><label>Message (optional)</label><textarea id="f-msg" rows="2" placeholder="Any specific requirements or questions..."></textarea></div>
+      </div>
+      <button class="submit-btn" id="submit-btn" onclick="submitForm()">Get My Career Boost →</button>
+      <div class="or-div">or contact directly</div>
+      <div style="text-align:center;">
+        <a href="https://wa.me/919731209180?text=Hi!%20I%20want%20to%20enquire%20about%20your%20career%20services." class="wa-btn-link" target="_blank">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+          Chat on WhatsApp
+        </a>
+      </div>
+    </div>
+    <div class="form-success" id="form-success">
+      <div class="tick">✅</div>
+      <h3>We've got your details!</h3>
+      <p>We'll reach out within 2 hours on WhatsApp or email.</p>
+      <a href="https://wa.me/919731209180" class="wa-btn-link" target="_blank">Message on WhatsApp</a>
+    </div>
+    <div class="bot-trust">
+      <div class="bt-item"><span style="color:var(--green)">✓</span>Pay after preview</div>
+      <div class="bt-item"><span style="color:var(--green)">✓</span>UPI / GPay</div>
+      <div class="bt-item"><span style="color:var(--green)">✓</span>100% satisfaction</div>
+      <div class="bt-item"><span style="color:var(--green)">✓</span>Revision guarantee</div>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <p style="font-family:'Fraunces',serif;font-size:18px;color:var(--gold);margin-bottom:6px;">ResumeRight</p>
+  <p>Career Services Platform · Bengaluru, India</p>
+  <p style="margin-top:6px;">© 2026 ResumeRight. All rights reserved.</p>
+</footer>
+
+<!-- AUTH MODAL -->
+<div class="modal-overlay" id="authModal" onclick="if(event.target===this)closeModal()">
+  <div class="modal">
+    <button class="modal-close" onclick="closeModal()">×</button>
+    <h2 id="modalTitle">Welcome back</h2>
+    <p id="modalSub">Login to access your dashboard.</p>
+    <div class="modal-tabs">
+      <button class="modal-tab active" id="loginTab" onclick="switchTab('login')">Login</button>
+      <button class="modal-tab" id="registerTab" onclick="switchTab('register')">Register</button>
+    </div>
+    <input class="modal-input" type="text" id="authName" placeholder="Your name" style="display:none"/>
+    <input class="modal-input" type="email" id="authEmail" placeholder="Email address"/>
+    <input class="modal-input" type="password" id="authPass" placeholder="Password"/>
+    <button class="modal-submit" id="authSubmit" onclick="handleAuth()">Login</button>
+    <div class="modal-msg" id="modalMsg"></div>
+  </div>
+</div>
+
+<!-- CHATBOT -->
+<button class="chat-fab" onclick="toggleChat()">💬<div class="chat-notif" id="chatNotif">1</div></button>
+<div class="chat-panel" id="chatPanel">
+  <div class="chat-header">
+    <div class="chat-avatar">🤖</div>
+    <div><div class="chat-name">ResumeRight AI</div><div class="chat-status">● Online</div></div>
+    <button class="chat-close" onclick="toggleChat()">×</button>
+  </div>
+  <div class="chat-msgs" id="chatMsgs">
+    <div class="msg bot">👋 Hi! I can help with ATS resumes, Naukri optimization, LinkedIn branding, or pricing. What do you need?</div>
+  </div>
+  <div class="chat-sugs" id="chatSugs">
+    <button class="sug" onclick="askBot('What is ATS?')">What is ATS?</button>
+    <button class="sug" onclick="askBot('Naukri services')">Naukri services</button>
+    <button class="sug" onclick="askBot('LinkedIn pricing')">LinkedIn pricing</button>
+    <button class="sug" onclick="askBot('Best bundle')">Best bundle</button>
+  </div>
+  <div class="chat-inp-row">
+    <input class="chat-inp" id="chatInput" placeholder="Ask anything..." onkeydown="if(event.key==='Enter')sendChat()"/>
+    <button class="chat-send" onclick="sendChat()">↑</button>
+  </div>
+</div>
+
+<script>
+const API = 'https://d17n9gdtbr01ux.cloudfront.net';
+let currentUser = JSON.parse(localStorage.getItem('rr_user')||'null');
+
+function updateNav(){
+  if(currentUser){
+    document.getElementById('loginBtn').style.display='none';
+    document.getElementById('userAvatar').style.display='flex';
+    document.getElementById('userAvatar').textContent=currentUser.name[0].toUpperCase();
+    document.getElementById('uploadSection').style.display='block';
+  } else {
+    document.getElementById('loginBtn').style.display='block';
+    document.getElementById('userAvatar').style.display='none';
+    document.getElementById('uploadSection').style.display='none';
+  }
+}
+updateNav();
+
+// Service tabs
+function showService(svc){
+  document.querySelectorAll('.svc-tab').forEach(t=>t.classList.remove('active'));
+  document.querySelectorAll('.service-panel').forEach(p=>p.classList.remove('active'));
+  event.target.classList.add('active');
+  document.getElementById('panel-'+svc).classList.add('active');
+}
+
+// Select package and scroll to form
+function selectPackage(pkg){
+  document.getElementById('f-service').value=pkg;
+  document.getElementById('contact').scrollIntoView({behavior:'smooth'});
+}
+
+// Auth
+let authMode='login';
+function openModal(mode){authMode=mode;document.getElementById('authModal').classList.add('open');switchTab(mode);}
+function closeModal(){document.getElementById('authModal').classList.remove('open');}
+function switchTab(tab){
+  authMode=tab;
+  document.getElementById('loginTab').classList.toggle('active',tab==='login');
+  document.getElementById('registerTab').classList.toggle('active',tab==='register');
+  document.getElementById('authName').style.display=tab==='register'?'block':'none';
+  document.getElementById('authSubmit').textContent=tab==='login'?'Login':'Create Account';
+  document.getElementById('modalTitle').textContent=tab==='login'?'Welcome back':'Create account';
+  document.getElementById('modalSub').textContent=tab==='login'?'Login to access your dashboard.':'Join 500+ professionals who got hired.';
+  document.getElementById('modalMsg').textContent='';
+}
+async function handleAuth(){
+  const email=document.getElementById('authEmail').value.trim();
+  const pass=document.getElementById('authPass').value;
+  const name=document.getElementById('authName').value.trim();
+  const msg=document.getElementById('modalMsg');
+  const btn=document.getElementById('authSubmit');
+  if(!email||!pass){msg.textContent='Please fill all fields.';msg.className='modal-msg error';return;}
+  btn.disabled=true;btn.textContent='Please wait...';
+  try{
+    const endpoint=authMode==='register'?'/register':'/login';
+    const body=authMode==='register'?{name,email,password:pass}:{email,password:pass};
+    const r=await fetch(API+endpoint,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+    const d=await r.json();
+    if(!r.ok){msg.textContent=d.error||'Failed';msg.className='modal-msg error';btn.disabled=false;btn.textContent=authMode==='login'?'Login':'Create Account';return;}
+    currentUser=d.user;
+    localStorage.setItem('rr_user',JSON.stringify(currentUser));
+    msg.textContent=(authMode==='register'?'Account created! Welcome, ':'Welcome back, ')+currentUser.name+'!';
+    msg.className='modal-msg success';
+    setTimeout(()=>{closeModal();updateNav();if(authMode==='register')document.getElementById('uploadSection').scrollIntoView({behavior:'smooth'});},1200);
+  }catch(e){msg.textContent='Connection error.';msg.className='modal-msg error';btn.disabled=false;btn.textContent=authMode==='login'?'Login':'Create Account';}
+}
+function logout(){if(confirm('Logout?')){localStorage.removeItem('rr_user');currentUser=null;updateNav();}}
+
+// Upload
+async function handleUpload(input){
+  if(!input.files[0])return;
+  const prog=document.getElementById('uploadProgress');
+  const fill=document.getElementById('progressFill');
+  const done=document.getElementById('uploadDone');
+  prog.style.display='block';done.style.display='none';
+  let w=0;const iv=setInterval(()=>{w+=Math.random()*12;if(w>=85){w=85;clearInterval(iv);}fill.style.width=w+'%';},120);
+  try{
+    const fd=new FormData();fd.append('resume',input.files[0]);
+    if(currentUser)fd.append('email',currentUser.email);
+    await fetch(API+'/upload',{method:'POST',body:fd});
+    clearInterval(iv);fill.style.width='100%';
+    setTimeout(()=>{prog.style.display='none';done.style.display='block';},400);
+  }catch(e){clearInterval(iv);prog.style.display='none';alert('Upload failed.');}
+}
+
+// Lead form
+async function submitForm(){
+  const name=document.getElementById('f-name').value.trim();
+  const phone=document.getElementById('f-phone').value.trim();
+  const email=document.getElementById('f-email').value.trim();
+  const service=document.getElementById('f-service').value;
+  if(!name||!phone||!email){alert('Please fill Name, Phone and Email.');return;}
+  const btn=document.getElementById('submit-btn');
+  btn.disabled=true;btn.textContent='Submitting...';
+  try{
+    await fetch(API+'/submit',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({
+      name,phone,email,service,
+      exp:document.getElementById('f-exp').value,
+      current:document.getElementById('f-current').value.trim(),
+      target:document.getElementById('f-target').value.trim(),
+      message:document.getElementById('f-msg').value.trim()
+    })});
+  }catch(e){}
+  document.getElementById('form-area').style.display='none';
+  document.getElementById('form-success').style.display='block';
+}
+
+// FAQ
+function toggleFaq(el){
+  const item=el.parentElement;
+  const open=item.classList.contains('open');
+  document.querySelectorAll('.faq-item').forEach(i=>i.classList.remove('open'));
+  if(!open)item.classList.add('open');
+}
+
+// Chatbot
+let chatOpen=false;
+function toggleChat(){
+  chatOpen=!chatOpen;
+  document.getElementById('chatPanel').classList.toggle('open',chatOpen);
+  document.getElementById('chatNotif').style.display=chatOpen?'none':'flex';
+}
+function addMsg(text,role){
+  const msgs=document.getElementById('chatMsgs');
+  const d=document.createElement('div');
+  d.className='msg '+role;d.textContent=text;
+  msgs.appendChild(d);msgs.scrollTop=msgs.scrollHeight;
+}
+const BOT={
+  'ats':['ATS (Applicant Tracking System) auto-rejects 75% of resumes before a human sees them. Our ATS-optimized resumes are keyword-matched, cleanly formatted, and pass every filter.'],
+  'resume':['We offer 3 resume packages: Basic ₹999, Professional ₹1,999, and Premium ₹3,499. All include ATS optimization. Professional and Premium also include cover letter and LinkedIn bio.'],
+  'naukri':['Our Naukri services include: One-Time Setup (₹799), Monthly Management (₹1,499/mo — includes daily profile refresh + 20 job applications/week), and 3-Month Power Plan (₹3,999). We keep your profile at the top of recruiter searches!'],
+  'linkedin':['LinkedIn packages: Profile Makeover ₹999, Growth Package ₹2,499 (includes 5 custom posts + connection strategy), Monthly Branding ₹1,999/mo. A great LinkedIn profile gets you 40× more recruiter messages!'],
+  'bundle':['Our bundles save you the most: Starter Bundle ₹1,999 (Resume + Naukri + LinkedIn), Pro Bundle ₹4,999 (all services + 1 month management), Elite Bundle ₹9,999 (3 months fully managed + interview coaching). Best value!'],
+  'price':['Our services start at ₹799 for Naukri setup and go up to ₹9,999 for the Elite Bundle (3 months fully managed). All include revisions and satisfaction guarantee!'],
+  'pay':['We accept UPI, Google Pay, PhonePe, and bank transfer. You pay ONLY after you see and approve the work — zero upfront risk!'],
+  'time':['Resume: 24–48h. Naukri setup: same day. LinkedIn: 24h. Bundles: all done in 2–3 days. Monthly plans start immediately after payment.'],
+  'daily':['In our Naukri Monthly (₹1,499) and Power Plans, we log in daily, refresh your profile, update keywords, and apply to 20–30 relevant jobs per week on your behalf!'],
+};
+function getBotReply(q){
+  const l=q.toLowerCase();
+  if(l.includes('ats')||l.includes('applicant'))return BOT['ats'][0];
+  if(l.includes('resume')||l.includes('cv'))return BOT['resume'][0];
+  if(l.includes('naukri'))return BOT['naukri'][0];
+  if(l.includes('linkedin'))return BOT['linkedin'][0];
+  if(l.includes('bundle')||l.includes('combo'))return BOT['bundle'][0];
+  if(l.includes('price')||l.includes('cost')||l.includes('much')||l.includes('₹'))return BOT['price'][0];
+  if(l.includes('pay')||l.includes('upi')||l.includes('gpay'))return BOT['pay'][0];
+  if(l.includes('time')||l.includes('long')||l.includes('fast')||l.includes('deliver'))return BOT['time'][0];
+  if(l.includes('daily')||l.includes('appl'))return BOT['daily'][0];
+  return 'Great question! For detailed help, WhatsApp us at +91-97312-09180 or fill the contact form below. We respond within 2 hours! 😊';
+}
+function sendChat(){const i=document.getElementById('chatInput');const t=i.value.trim();if(!t)return;addMsg(t,'user');i.value='';document.getElementById('chatSugs').style.display='none';setTimeout(()=>addMsg(getBotReply(t),'bot'),600);}
+function askBot(q){addMsg(q,'user');document.getElementById('chatSugs').style.display='none';setTimeout(()=>addMsg(getBotReply(q),'bot'),500);}
+</script>
+</body>
+</html>
