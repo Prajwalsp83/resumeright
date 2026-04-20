@@ -31,7 +31,8 @@ jobs:
           cache-dependency-path: backend/package.json
 
       - name: Install dependencies
-        run: npm ci
+        run: npm install
+        working-directory: backend
 
       - name: Verify server syntax
         run: node --check server.js
