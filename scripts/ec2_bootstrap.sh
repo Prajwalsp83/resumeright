@@ -1,46 +1,69 @@
 #!/bin/bash
-# ResumeRight EC2 Bootstrap Script
-# Used as User Data in Launch Template for Auto Scaling Group
-
+# ResumeRight EC2 Bootstrap — rendered by Terraform templatefile()
 set -e
 exec > /var/log/userdata.log 2>&1
 
-echo "=== ResumeRight EC2 Bootstrap Starting ==="
-date
+echo "=== ResumeRight Bootstrap Starting ===" && date
 
-# Update system
-apt-get update -y
-apt-get upgrade -y
+# System update
+apt-get update -y && apt-get upgrade -y
 
-# Install Node.js 20
+# Node.js 20
 curl -fsSL https://deb.nodesource.com/setup_20.x | bash -
 apt-get install -y nodejs git
 
-# Install PM2 globally
+# PM2
 npm install -g pm2
 
-# Install AWS SSM Agent (for GitHub Actions deployment)
+# SSM Agent
 snap install amazon-ssm-agent --classic
 systemctl enable snap.amazon-ssm-agent.amazon-ssm-agent.service
-systemctl start snap.amazon-ssm-agent.amazon-ssm-agent.service
+systemctl start  snap.amazon-ssm-agent.amazon-ssm-agent.service
 
-# Create app directory
+# App directory
 mkdir -p /home/ubuntu/backend
 cd /home/ubuntu/backend
 
-# Clone the repository (replace with your actual repo URL)
-git clone https://github.com/YOUR_GITHUB_USERNAME/resumeright.git /tmp/resumeright
-cp -r /tmp/resumeright/backend/* /home/ubuntu/backend/
+# Write server files inline (GitHub Actions will overwrite on next deploy)
+cat > /home/ubuntu/backend/package.json <<'PKGJSON'
+{
+  "name": "resumeright-backend",
+  "version": "1.0.0",
+  "main": "server.js",
+  "scripts": { "start": "node server.js" },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "express": "^4.18.2",
+    "mongodb": "^6.3.0",
+    "multer": "^1.4.5-lts.1"
+  }
+}
+PKGJSON
+
+# Inject secrets from Terraform variables
+export MONGO_URI="${mongo_uri}"
+export ADMIN_KEY="${admin_key}"
+export PORT=5000
+
+# Write env file for PM2 ecosystem
+cat > /home/ubuntu/backend/ecosystem.config.js <<ECOSYSTEM
+module.exports = {
+  apps: [{
+    name: '${app_name}',
+    script: 'server.js',
+    env: {
+      NODE_ENV: 'production',
+      PORT: 5000,
+      MONGO_URI: '${mongo_uri}',
+      ADMIN_KEY: '${admin_key}'
+    }
+  }]
+}
+ECOSYSTEM
+
 chown -R ubuntu:ubuntu /home/ubuntu/backend
+cd /home/ubuntu/backend && npm install --production
 
-# Install dependencies
-cd /home/ubuntu/backend
-npm ci --production
-
-# Start the application with PM2
-sudo -u ubuntu pm2 start server.js --name resumeright
-sudo -u ubuntu pm2 save
-sudo -u ubuntu pm2 startup systemd -u ubuntu --hp /home/ubuntu
-
-echo "=== Bootstrap Complete ==="
-date
+# GitHub Actions will do the first real deploy via SSM
+# This just ensures Node + PM2 are ready
+echo "=== Bootstrap Complete ===" && date
