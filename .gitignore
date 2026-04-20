@@ -8,3 +8,8 @@ uploads/
 *.log
 dist/
 .npm/
+# .gitignore — add this line
+terraform/terraform.tfvars
+terraform/.terraform/
+terraform/*.tfstate
+terraform/*.tfstate.backup
