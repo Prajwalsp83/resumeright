@@ -289,7 +289,7 @@ resource "aws_lb_target_group" "app" {
   vpc_id   = aws_vpc.main.id
 
   health_check {
-    path                = "/"
+    path                = "/healthz"
     interval            = 30
     timeout             = 5
     healthy_threshold   = 2
@@ -324,7 +324,7 @@ resource "aws_autoscaling_group" "app" {
   }
 
   target_group_arns         = [aws_lb_target_group.app.arn]
-  health_check_type         = "EC2"
+  health_check_type         = "ELB"
   health_check_grace_period = 300
 
   tag {
@@ -421,7 +421,7 @@ resource "aws_s3_bucket_lifecycle_configuration" "uploads" {
   rule {
     id     = "expire-unprocessed"
     status = "Enabled"
-    filter {}
+    filter { prefix = "" }
     expiration { days = 180 }
   }
 }

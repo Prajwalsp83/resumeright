@@ -73,6 +73,7 @@ jobs:
         uses: hashicorp/setup-terraform@v3
         with:
           terraform_version: 1.7.0
+          terraform_wrapper: false
 
       - name: Terraform Init (S3 backend)
         run: |
@@ -85,7 +86,7 @@ jobs:
 
       - name: Terraform Plan
         run: |
-          terraform plan \
+          terraform plan -input=false \
             -var="mongo_uri=${{ secrets.MONGO_URI }}" \
             -var="admin_key=${{ secrets.ADMIN_KEY }}" \
             -var="jwt_secret=${{ secrets.JWT_SECRET }}" \
@@ -344,6 +345,7 @@ jobs:
         uses: hashicorp/setup-terraform@v3
         with:
           terraform_version: 1.7.0
+          terraform_wrapper: false
 
       - name: Terraform Init (S3 backend)
         run: |
