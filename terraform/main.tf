@@ -10,6 +10,11 @@ terraform {
     aws    = { source = "hashicorp/aws",    version = "~> 5.0" }
     random = { source = "hashicorp/random", version = "~> 3.5" }
   }
+
+  # State is stored remotely in S3 so every pipeline run sees the same state.
+  # The bucket is passed via `-backend-config` at init time (see the workflow),
+  # not hardcoded here, so the same module works for multiple environments.
+  backend "s3" {}
 }
 
 provider "aws" {

@@ -74,8 +74,13 @@ jobs:
         with:
           terraform_version: 1.7.0
 
-      - name: Terraform Init
-        run: terraform init
+      - name: Terraform Init (S3 backend)
+        run: |
+          terraform init -input=false \
+            -backend-config="bucket=${{ secrets.TF_STATE_BUCKET }}" \
+            -backend-config="key=resumeright/terraform.tfstate" \
+            -backend-config="region=${{ env.AWS_REGION }}" \
+            -backend-config="encrypt=true"
         working-directory: ${{ env.TF_DIR }}
 
       - name: Terraform Plan
@@ -104,14 +109,6 @@ jobs:
             echo "api_url=$(terraform output -raw api_url)"
           } >> "$GITHUB_OUTPUT"
         working-directory: ${{ env.TF_DIR }}
-
-      # Save state as artifact so destroy job can reuse it
-      - name: Upload Terraform state
-        uses: actions/upload-artifact@v4
-        with:
-          name: tfstate
-          path: ${{ env.TF_DIR }}/terraform.tfstate
-          retention-days: 30
 
   ###########################################################################
   # JOB 3 — Deploy Backend to EC2 via SSM
@@ -343,19 +340,18 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region:            ${{ env.AWS_REGION }}
 
-      - name: Download Terraform state
-        uses: actions/download-artifact@v4
-        with:
-          name: tfstate
-          path: ${{ env.TF_DIR }}
-
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
         with:
           terraform_version: 1.7.0
 
-      - name: Terraform Init
-        run: terraform init
+      - name: Terraform Init (S3 backend)
+        run: |
+          terraform init -input=false \
+            -backend-config="bucket=${{ secrets.TF_STATE_BUCKET }}" \
+            -backend-config="key=resumeright/terraform.tfstate" \
+            -backend-config="region=${{ env.AWS_REGION }}" \
+            -backend-config="encrypt=true"
         working-directory: ${{ env.TF_DIR }}
 
       - name: Terraform Destroy
