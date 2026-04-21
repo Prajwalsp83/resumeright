@@ -7,10 +7,8 @@
 terraform {
   required_version = ">= 1.6"
   required_providers {
-    aws = {
-      source  = "hashicorp/aws"
-      version = "~> 5.0"
-    }
+    aws    = { source = "hashicorp/aws",    version = "~> 5.0" }
+    random = { source = "hashicorp/random", version = "~> 3.5" }
   }
 }
 
@@ -21,10 +19,26 @@ provider "aws" {
 ###############################################################################
 # VARIABLES
 ###############################################################################
-variable "aws_region"    { default = "ap-south-1" }
-variable "app_name"      { default = "resumeright" }
-variable "mongo_uri"     { description = "MongoDB Atlas connection string" }
-variable "admin_key"     { default = "resumeright2026" }
+variable "aws_region" { default = "ap-south-1" }
+variable "app_name"   { default = "resumeright" }
+
+variable "mongo_uri" {
+  description = "MongoDB Atlas connection string"
+  sensitive   = true
+}
+variable "admin_key" {
+  description = "Admin bootstrap key"
+  sensitive   = true
+}
+variable "jwt_secret" {
+  description = "Secret used to sign JWTs (min 32 chars)"
+  sensitive   = true
+}
+variable "github_repo" {
+  description = "HTTPS URL of the repo (e.g. https://github.com/user/resumeright.git)"
+  type        = string
+  default     = ""
+}
 
 locals {
   tags = {
@@ -33,6 +47,32 @@ locals {
     ManagedBy   = "terraform"
   }
 }
+
+###############################################################################
+# SSM PARAMETER STORE — secrets live here (not in tfstate, not in user-data)
+###############################################################################
+resource "aws_ssm_parameter" "mongo_uri" {
+  name  = "/${var.app_name}/MONGO_URI"
+  type  = "SecureString"
+  value = var.mongo_uri
+  tags  = local.tags
+}
+
+resource "aws_ssm_parameter" "admin_key" {
+  name  = "/${var.app_name}/ADMIN_KEY"
+  type  = "SecureString"
+  value = var.admin_key
+  tags  = local.tags
+}
+
+resource "aws_ssm_parameter" "jwt_secret" {
+  name  = "/${var.app_name}/JWT_SECRET"
+  type  = "SecureString"
+  value = var.jwt_secret
+  tags  = local.tags
+}
+
+data "aws_caller_identity" "me" {}
 
 ###############################################################################
 # VPC & NETWORKING
@@ -144,6 +184,38 @@ resource "aws_iam_role_policy_attachment" "ssm" {
   policy_arn = "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore"
 }
 
+# Inline policy: read app SSM params + R/W on private uploads bucket.
+data "aws_iam_policy_document" "ec2_inline" {
+  statement {
+    sid     = "ReadAppParams"
+    actions = ["ssm:GetParameter", "ssm:GetParameters", "ssm:GetParametersByPath"]
+    resources = [
+      "arn:aws:ssm:${var.aws_region}:${data.aws_caller_identity.me.account_id}:parameter/${var.app_name}/*"
+    ]
+  }
+  statement {
+    sid       = "DecryptSsm"
+    actions   = ["kms:Decrypt"]
+    resources = ["*"]
+  }
+  statement {
+    sid       = "UploadsBucketRw"
+    actions   = ["s3:PutObject", "s3:GetObject", "s3:DeleteObject"]
+    resources = ["${aws_s3_bucket.uploads.arn}/*"]
+  }
+  statement {
+    sid       = "UploadsBucketList"
+    actions   = ["s3:ListBucket"]
+    resources = [aws_s3_bucket.uploads.arn]
+  }
+}
+
+resource "aws_iam_role_policy" "ec2_inline" {
+  name   = "${var.app_name}-ec2-inline"
+  role   = aws_iam_role.ec2.id
+  policy = data.aws_iam_policy_document.ec2_inline.json
+}
+
 resource "aws_iam_instance_profile" "ec2" {
   name = "${var.app_name}-ec2-profile"
   role = aws_iam_role.ec2.name
@@ -170,10 +242,19 @@ resource "aws_launch_template" "app" {
 
   vpc_security_group_ids = [aws_security_group.ec2.id]
 
+  # Extra keys (jwt_secret, github_repo, aws_region, uploads_bucket, cors_origins)
+  # are passed eagerly so a future bootstrap rewrite that fetches from SSM / writes
+  # a full .env works without another Terraform round-trip. The current bootstrap
+  # only references mongo_uri/admin_key/app_name; unreferenced keys are ignored.
   user_data = base64encode(templatefile("${path.module}/bootstrap.sh", {
-    mongo_uri = var.mongo_uri
-    admin_key = var.admin_key
-    app_name  = var.app_name
+    mongo_uri      = var.mongo_uri
+    admin_key      = var.admin_key
+    jwt_secret     = var.jwt_secret
+    app_name       = var.app_name
+    aws_region     = var.aws_region
+    uploads_bucket = aws_s3_bucket.uploads.bucket
+    cors_origins   = "https://${aws_cloudfront_distribution.frontend.domain_name}"
+    github_repo    = var.github_repo
   }))
 
   tag_specifications {
@@ -238,8 +319,8 @@ resource "aws_autoscaling_group" "app" {
   }
 
   target_group_arns         = [aws_lb_target_group.app.arn]
-  health_check_type         = "ELB"
-  health_check_grace_period = 120
+  health_check_type         = "EC2"
+  health_check_grace_period = 300
 
   tag {
     key                 = "Name"
@@ -304,6 +385,40 @@ resource "aws_s3_object" "admin" {
   source       = "${path.module}/../frontend/admin.html"
   content_type = "text/html"
   etag         = filemd5("${path.module}/../frontend/admin.html")
+}
+
+###############################################################################
+# S3 — Resume uploads (PRIVATE, served via pre-signed URLs from the API)
+###############################################################################
+resource "aws_s3_bucket" "uploads" {
+  bucket        = "${var.app_name}-uploads-${random_id.suffix.hex}"
+  force_destroy = true
+  tags          = local.tags
+}
+
+resource "aws_s3_bucket_public_access_block" "uploads" {
+  bucket                  = aws_s3_bucket.uploads.id
+  block_public_acls       = true
+  block_public_policy     = true
+  ignore_public_acls      = true
+  restrict_public_buckets = true
+}
+
+resource "aws_s3_bucket_server_side_encryption_configuration" "uploads" {
+  bucket = aws_s3_bucket.uploads.id
+  rule {
+    apply_server_side_encryption_by_default { sse_algorithm = "AES256" }
+  }
+}
+
+resource "aws_s3_bucket_lifecycle_configuration" "uploads" {
+  bucket = aws_s3_bucket.uploads.id
+  rule {
+    id     = "expire-unprocessed"
+    status = "Enabled"
+    filter {}
+    expiration { days = 180 }
+  }
 }
 
 ###############################################################################
@@ -382,5 +497,6 @@ output "frontend_url"    { value = "https://${aws_cloudfront_distribution.fronte
 output "api_url"         { value = "https://${aws_cloudfront_distribution.api.domain_name}" }
 output "alb_dns"         { value = aws_lb.app.dns_name }
 output "s3_bucket"       { value = aws_s3_bucket.frontend.bucket }
+output "uploads_bucket"  { value = aws_s3_bucket.uploads.bucket }
 output "cf_frontend_id"  { value = aws_cloudfront_distribution.frontend.id }
 output "cf_api_id"       { value = aws_cloudfront_distribution.api.id }

@@ -1,0 +1,19 @@
+# Copy to terraform.tfvars and fill in real values.
+# terraform.tfvars is gitignored — never commit it.
+
+aws_region = "ap-south-1"
+app_name   = "resumeright"
+
+# From MongoDB Atlas → Database → Connect → Drivers
+mongo_uri  = "mongodb+srv://<user>:<password>@<cluster>.mongodb.net/resumeright?retryWrites=true&w=majority"
+
+# Bootstrap key used for the first-admin login. Rotate after first login.
+admin_key  = "change-me-to-a-long-random-string"
+
+# Secret used to sign JWTs. Must be >= 32 chars. Generate with:
+#   node -e "console.log(require('crypto').randomBytes(48).toString('base64url'))"
+jwt_secret = "change-me-to-a-long-random-string"
+
+# Public HTTPS URL of this repo. The EC2 bootstrap clones it at first boot.
+# If you rename/fork the repo, update this value (and any deploy-key setup).
+github_repo = "https://github.com/YOUR_USER/resumeright.git"

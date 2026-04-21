@@ -13,6 +13,7 @@ on:
 env:
   AWS_REGION: ap-south-1
   TF_DIR: ./terraform
+  APP_NAME: resumeright
 
 jobs:
   ###########################################################################
@@ -28,17 +29,19 @@ jobs:
         with:
           node-version: '20'
           cache: 'npm'
-          cache-dependency-path: backend/package.json
+          cache-dependency-path: backend/package-lock.json
 
       - name: Install dependencies
-        run: npm install
+        run: npm ci
         working-directory: backend
 
       - name: Verify server syntax
-        run: node --check backend/server.js
+        run: node --check server.js
+        working-directory: backend
 
-      - name: Run health check
-        run: echo "✅ Syntax OK"
+      - name: Verify app syntax
+        run: node --check app.js
+        working-directory: backend
 
   ###########################################################################
   # JOB 2 — Terraform Apply (provision / update infra)
@@ -51,7 +54,10 @@ jobs:
     outputs:
       alb_dns:        ${{ steps.tf_output.outputs.alb_dns }}
       s3_bucket:      ${{ steps.tf_output.outputs.s3_bucket }}
+      uploads_bucket: ${{ steps.tf_output.outputs.uploads_bucket }}
       cf_frontend_id: ${{ steps.tf_output.outputs.cf_frontend_id }}
+      frontend_url:   ${{ steps.tf_output.outputs.frontend_url }}
+      api_url:        ${{ steps.tf_output.outputs.api_url }}
 
     steps:
       - uses: actions/checkout@v4
@@ -77,6 +83,8 @@ jobs:
           terraform plan \
             -var="mongo_uri=${{ secrets.MONGO_URI }}" \
             -var="admin_key=${{ secrets.ADMIN_KEY }}" \
+            -var="jwt_secret=${{ secrets.JWT_SECRET }}" \
+            -var="github_repo=https://github.com/${{ github.repository }}.git" \
             -out=tfplan
         working-directory: ${{ env.TF_DIR }}
 
@@ -87,12 +95,17 @@ jobs:
       - name: Capture outputs
         id: tf_output
         run: |
-          echo "alb_dns=$(terraform output -raw alb_dns)"             >> $GITHUB_OUTPUT
-          echo "s3_bucket=$(terraform output -raw s3_bucket)"         >> $GITHUB_OUTPUT
-          echo "cf_frontend_id=$(terraform output -raw cf_frontend_id)" >> $GITHUB_OUTPUT
+          {
+            echo "alb_dns=$(terraform output -raw alb_dns)"
+            echo "s3_bucket=$(terraform output -raw s3_bucket)"
+            echo "uploads_bucket=$(terraform output -raw uploads_bucket)"
+            echo "cf_frontend_id=$(terraform output -raw cf_frontend_id)"
+            echo "frontend_url=$(terraform output -raw frontend_url)"
+            echo "api_url=$(terraform output -raw api_url)"
+          } >> "$GITHUB_OUTPUT"
         working-directory: ${{ env.TF_DIR }}
 
-      # Save state as artifact so destroy job can use it
+      # Save state as artifact so destroy job can reuse it
       - name: Upload Terraform state
         uses: actions/upload-artifact@v4
         with:
@@ -102,6 +115,10 @@ jobs:
 
   ###########################################################################
   # JOB 3 — Deploy Backend to EC2 via SSM
+  # Clones the repo fresh on every deploy, fetches secrets from SSM on the
+  # instance (role has ssm:GetParameter + kms:Decrypt), writes the full .env,
+  # installs deps, and reloads pm2. This means the first-boot bootstrap's
+  # incomplete .env never matters — deploy always overwrites it.
   ###########################################################################
   deploy-backend:
     name: Deploy Backend to EC2
@@ -109,8 +126,6 @@ jobs:
     needs: terraform-apply
 
     steps:
-      - uses: actions/checkout@v4
-
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
@@ -118,37 +133,143 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region:            ${{ env.AWS_REGION }}
 
-      - name: Get EC2 instance ID from ASG
+      - name: Wait for ASG instance to be healthy
         id: get_instance
         run: |
-          INSTANCE_ID=$(aws autoscaling describe-auto-scaling-groups \
-            --auto-scaling-group-names "resumeright-asg" \
-            --query "AutoScalingGroups[0].Instances[0].InstanceId" \
-            --output text)
-          echo "instance_id=$INSTANCE_ID" >> $GITHUB_OUTPUT
-          echo "🖥️  Instance: $INSTANCE_ID"
+          for i in {1..30}; do
+            INSTANCE_ID=$(aws autoscaling describe-auto-scaling-groups \
+              --auto-scaling-group-names "${APP_NAME}-asg" \
+              --query "AutoScalingGroups[0].Instances[?LifecycleState=='InService']|[0].InstanceId" \
+              --output text)
+            if [ -n "$INSTANCE_ID" ] && [ "$INSTANCE_ID" != "None" ]; then
+              echo "Instance $INSTANCE_ID is InService"
+              echo "instance_id=$INSTANCE_ID" >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
+            echo "Waiting for ASG instance... ($i/30)"
+            sleep 10
+          done
+          echo "ERROR: no InService instance after 5 minutes" >&2
+          exit 1
+
+      - name: Wait for SSM agent to be online
+        run: |
+          INSTANCE_ID="${{ steps.get_instance.outputs.instance_id }}"
+          for i in {1..30}; do
+            STATUS=$(aws ssm describe-instance-information \
+              --filters "Key=InstanceIds,Values=$INSTANCE_ID" \
+              --query "InstanceInformationList[0].PingStatus" \
+              --output text 2>/dev/null || echo "None")
+            if [ "$STATUS" = "Online" ]; then
+              echo "SSM agent online"
+              exit 0
+            fi
+            echo "Waiting for SSM agent... ($i/30) status=$STATUS"
+            sleep 10
+          done
+          echo "ERROR: SSM agent not online after 5 minutes" >&2
+          exit 1
 
       - name: Deploy via SSM
+        id: deploy
         run: |
-          aws ssm send-command \
-            --instance-ids "${{ steps.get_instance.outputs.instance_id }}" \
+          INSTANCE_ID="${{ steps.get_instance.outputs.instance_id }}"
+          UPLOADS_BUCKET="${{ needs.terraform-apply.outputs.uploads_bucket }}"
+          FRONTEND_URL="${{ needs.terraform-apply.outputs.frontend_url }}"
+          REPO_URL="https://github.com/${{ github.repository }}.git"
+          COMMIT_SHA="${{ github.sha }}"
+
+          # Build the remote script. Heredoc is safer than JSON array escapes.
+          cat > /tmp/remote.sh <<REMOTE
+          set -euo pipefail
+          export AWS_REGION=${AWS_REGION}
+          export APP_DIR=/home/ubuntu/app
+          export BACKEND_DIR=\$APP_DIR/backend
+
+          # Clone or update the repo
+          if [ ! -d "\$APP_DIR/.git" ]; then
+            rm -rf "\$APP_DIR"
+            sudo -u ubuntu git clone ${REPO_URL} "\$APP_DIR"
+          fi
+          cd "\$APP_DIR"
+          sudo -u ubuntu git fetch --all --prune
+          sudo -u ubuntu git reset --hard ${COMMIT_SHA}
+
+          # Fetch secrets from SSM (instance role has permission)
+          MONGO_URI=\$(aws ssm get-parameter --with-decryption --name "/${APP_NAME}/MONGO_URI"  --query Parameter.Value --output text)
+          ADMIN_KEY=\$(aws ssm get-parameter --with-decryption --name "/${APP_NAME}/ADMIN_KEY"  --query Parameter.Value --output text)
+          JWT_SECRET=\$(aws ssm get-parameter --with-decryption --name "/${APP_NAME}/JWT_SECRET" --query Parameter.Value --output text)
+
+          # Write full .env (atomically, 600 perms)
+          umask 077
+          cat > "\$BACKEND_DIR/.env.new" <<ENV
+          NODE_ENV=production
+          PORT=5000
+          MONGO_URI=\$MONGO_URI
+          DB_NAME=${APP_NAME}
+          ADMIN_KEY=\$ADMIN_KEY
+          JWT_SECRET=\$JWT_SECRET
+          JWT_EXPIRES_IN=7d
+          BCRYPT_ROUNDS=12
+          AWS_REGION=${AWS_REGION}
+          S3_BUCKET_UPLOADS=${UPLOADS_BUCKET}
+          CORS_ORIGINS=${FRONTEND_URL}
+          RATE_LIMIT_WINDOW_MS=900000
+          RATE_LIMIT_MAX=100
+          ENV
+          chown ubuntu:ubuntu "\$BACKEND_DIR/.env.new"
+          mv "\$BACKEND_DIR/.env.new" "\$BACKEND_DIR/.env"
+
+          # Install deps + reload pm2 as ubuntu user.
+          # Delete any stale 'resumeright' app from the first-boot bootstrap (it
+          # was started from the wrong cwd and will crash-loop) before starting
+          # the real one from \$BACKEND_DIR.
+          sudo -u ubuntu bash -lc "cd \$BACKEND_DIR && npm ci --omit=dev"
+          sudo -u ubuntu bash -lc "pm2 delete resumeright || true"
+          sudo -u ubuntu bash -lc "cd \$BACKEND_DIR && pm2 start ecosystem.config.js --update-env"
+          sudo -u ubuntu bash -lc "pm2 save"
+
+          # Enable pm2 startup on reboot (idempotent)
+          env PATH=\$PATH:/usr/bin pm2 startup systemd -u ubuntu --hp /home/ubuntu >/dev/null || true
+          REMOTE
+
+          CMD_ID=$(aws ssm send-command \
+            --instance-ids "$INSTANCE_ID" \
             --document-name "AWS-RunShellScript" \
-            --parameters commands='[
-              "cd /home/ubuntu",
-              "if [ -d backend/.git ]; then cd backend && git pull; else git clone https://github.com/${{ github.repository }}.git backend && cd backend; fi",
-              "npm ci --production",
-              "pm2 restart resumeright || pm2 start ecosystem.config.js",
-              "pm2 save"
-            ]' \
-            --output text \
-            --query "Command.CommandId"
+            --comment "ResumeRight deploy ${COMMIT_SHA}" \
+            --parameters "commands=$(jq -Rs . < /tmp/remote.sh)" \
+            --timeout-seconds 600 \
+            --query "Command.CommandId" \
+            --output text)
+          echo "SSM command: $CMD_ID"
+          echo "cmd_id=$CMD_ID" >> "$GITHUB_OUTPUT"
+
+          # Wait for completion
+          aws ssm wait command-executed --command-id "$CMD_ID" --instance-id "$INSTANCE_ID"
+
+          # Print output (stdout + stderr)
+          echo "---- SSM stdout ----"
+          aws ssm get-command-invocation --command-id "$CMD_ID" --instance-id "$INSTANCE_ID" --query StandardOutputContent --output text
+          echo "---- SSM stderr ----"
+          aws ssm get-command-invocation --command-id "$CMD_ID" --instance-id "$INSTANCE_ID" --query StandardErrorContent --output text
+
+          STATUS=$(aws ssm get-command-invocation --command-id "$CMD_ID" --instance-id "$INSTANCE_ID" --query Status --output text)
+          [ "$STATUS" = "Success" ] || { echo "SSM deploy failed: $STATUS"; exit 1; }
 
       - name: Health check
         run: |
           ALB="${{ needs.terraform-apply.outputs.alb_dns }}"
-          echo "Waiting 30s for server to be ready..."
-          sleep 30
-          curl --fail --retry 5 --retry-delay 10 "http://$ALB/" | jq .
+          echo "Probing http://$ALB/healthz ..."
+          for i in {1..20}; do
+            if curl --fail --silent --max-time 5 "http://$ALB/healthz" | grep -q '"ok":true'; then
+              echo "Backend is healthy"
+              exit 0
+            fi
+            echo "Not ready yet ($i/20)"
+            sleep 10
+          done
+          echo "Health check failed" >&2
+          exit 1
 
   ###########################################################################
   # JOB 4 — Deploy Frontend to S3
@@ -169,11 +290,14 @@ jobs:
           aws-region:            ${{ env.AWS_REGION }}
 
       - name: Upload frontend to S3
+        working-directory: frontend
         run: |
           aws s3 sync . s3://${{ needs.terraform-apply.outputs.s3_bucket }}/ \
             --exclude "*" \
             --include "index.html" \
             --include "admin.html" \
+            --include "favicon.svg" \
+            --include "assets/*" \
             --delete
 
       - name: Invalidate CloudFront
@@ -187,31 +311,27 @@ jobs:
   # Only runs when triggered manually with input = "DESTROY"
   ###########################################################################
   request-destroy-approval:
-    name: "⚠️ Waiting for Destroy Approval"
+    name: "Waiting for Destroy Approval"
     runs-on: ubuntu-latest
-    needs: [deploy-backend, deploy-frontend]
     if: |
-      always() &&
       github.event_name == 'workflow_dispatch' &&
       github.event.inputs.destroy == 'DESTROY'
     environment:
-      name: production          # ← configure approval in GitHub → Environments → production
+      name: production          # configure required reviewers in GitHub → Environments → production
 
     steps:
       - name: Approval pending
         run: |
-          echo "🔴 Destroy requested."
-          echo "A repo admin must approve in GitHub → Actions → This run → Review deployments."
-          echo "Approve = infrastructure will be DELETED."
-          echo "Reject  = nothing happens, infra stays up."
+          echo "Destroy requested."
+          echo "A repo admin must approve in GitHub → Actions → this run → Review deployments."
 
   terraform-destroy:
-    name: "💣 Terraform Destroy"
+    name: "Terraform Destroy"
     runs-on: ubuntu-latest
     needs: request-destroy-approval
     if: |
-      always() &&
-      needs.request-destroy-approval.result == 'success'
+      github.event_name == 'workflow_dispatch' &&
+      github.event.inputs.destroy == 'DESTROY'
 
     steps:
       - uses: actions/checkout@v4
@@ -242,8 +362,10 @@ jobs:
         run: |
           terraform destroy -auto-approve \
             -var="mongo_uri=${{ secrets.MONGO_URI }}" \
-            -var="admin_key=${{ secrets.ADMIN_KEY }}"
+            -var="admin_key=${{ secrets.ADMIN_KEY }}" \
+            -var="jwt_secret=${{ secrets.JWT_SECRET }}" \
+            -var="github_repo=https://github.com/${{ github.repository }}.git"
         working-directory: ${{ env.TF_DIR }}
 
       - name: Confirm destruction
-        run: echo "✅ All AWS resources destroyed. MongoDB Atlas (free tier) is unaffected."
+        run: echo "All AWS resources destroyed. MongoDB Atlas (free tier) is unaffected."
