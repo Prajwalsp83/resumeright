@@ -211,8 +211,20 @@ jobs:
           fi
           command -v git  >/dev/null 2>&1 || apt-get install -y git
           command -v pm2  >/dev/null 2>&1 || npm install -g pm2
+          command -v jq   >/dev/null 2>&1 || apt-get install -y jq
 
-          echo "node: \$(node -v) | npm: \$(npm -v) | pm2: \$(pm2 -v) | git: \$(git --version)"
+          # AWS CLI v2 — Ubuntu AMIs don't ship it. We need it for ssm
+          # get-parameter (the script below fetches MONGO_URI, ADMIN_KEY,
+          # JWT_SECRET from Parameter Store using the instance-profile role).
+          if ! command -v aws >/dev/null 2>&1; then
+            echo "==> Installing AWS CLI v2"
+            apt-get install -y unzip curl ca-certificates
+            curl -fsSL "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o /tmp/awscliv2.zip
+            unzip -q -o /tmp/awscliv2.zip -d /tmp
+            /tmp/aws/install --update
+          fi
+
+          echo "node: \$(node -v) | npm: \$(npm -v) | pm2: \$(pm2 -v) | git: \$(git --version) | aws: \$(aws --version)"
 
           echo "==> Cloning / updating repo at \$APP_DIR"
           if [ ! -d "\$APP_DIR/.git" ]; then
