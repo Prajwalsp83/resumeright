@@ -274,14 +274,30 @@ jobs:
           sudo -u ubuntu pm2 jlist | jq '.[].pm2_env | {name, status, restart_time}'
 
           echo "==> Local health probe (port 5000)"
-          for i in {1..10}; do
-            if curl -fsS --max-time 3 http://127.0.0.1:5000/healthz; then
-              echo
-              echo "  local healthz OK"
+          # Poll localhost until /healthz responds. If after ~30s the app is
+          # still not listening, dump pm2 logs + state and fail LOUDLY so
+          # the SSM step reports a real failure instead of a silent success.
+          HEALTHY=0
+          for i in {1..15}; do
+            if curl -fsS --max-time 3 http://127.0.0.1:5000/healthz >/tmp/hz 2>&1; then
+              echo "  local healthz OK: \$(cat /tmp/hz)"
+              HEALTHY=1
               break
             fi
-            sleep 3
+            sleep 2
           done
+
+          echo "==> Listening ports (should show :5000)"
+          ss -ltnp 2>/dev/null || netstat -ltnp 2>/dev/null || true
+
+          echo "==> pm2 logs (last 80 lines)"
+          sudo -u ubuntu pm2 logs resumeright --lines 80 --nostream 2>&1 || true
+
+          if [ "\$HEALTHY" -ne 1 ]; then
+            echo "!! Local /healthz never responded. The app is not listening on :5000." >&2
+            echo "!! Check the pm2 logs above for the real error (missing env, bad MONGO_URI, etc)." >&2
+            exit 1
+          fi
           DEPLOY_EOF
           chmod +x /tmp/deploy.sh
           bash /tmp/deploy.sh
