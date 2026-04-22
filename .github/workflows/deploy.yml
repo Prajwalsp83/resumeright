@@ -177,13 +177,37 @@ jobs:
           COMMIT_SHA="${{ github.sha }}"
 
           # Build the remote script. Heredoc is safer than JSON array escapes.
+          # The script is self-sufficient: it installs node/npm/pm2/git if the
+          # bootstrap hasn't finished yet, so the deploy never races the userdata.
           cat > /tmp/remote.sh <<REMOTE
           set -euo pipefail
+          export DEBIAN_FRONTEND=noninteractive
           export AWS_REGION=${AWS_REGION}
           export APP_DIR=/home/ubuntu/app
           export BACKEND_DIR=\$APP_DIR/backend
 
-          # Clone or update the repo
+          echo "==> Ensuring prereqs (apt/node/npm/git/pm2)"
+          # Wait up to 3 min for any running apt/dpkg from bootstrap to finish
+          for i in {1..36}; do
+            if ! fuser /var/lib/dpkg/lock-frontend >/dev/null 2>&1 && \
+               ! fuser /var/lib/apt/lists/lock >/dev/null 2>&1; then
+              break
+            fi
+            echo "  apt/dpkg busy, waiting... (\$i/36)"
+            sleep 5
+          done
+
+          if ! command -v node >/dev/null 2>&1; then
+            # NodeSource 20.x (more reliable than Ubuntu's stale nodejs)
+            curl -fsSL https://deb.nodesource.com/setup_20.x | bash -
+            apt-get install -y nodejs
+          fi
+          command -v git  >/dev/null 2>&1 || apt-get install -y git
+          command -v pm2  >/dev/null 2>&1 || npm install -g pm2
+
+          echo "node: \$(node -v) | npm: \$(npm -v) | pm2: \$(pm2 -v) | git: \$(git --version)"
+
+          echo "==> Cloning / updating repo at \$APP_DIR"
           if [ ! -d "\$APP_DIR/.git" ]; then
             rm -rf "\$APP_DIR"
             sudo -u ubuntu git clone ${REPO_URL} "\$APP_DIR"
@@ -192,12 +216,12 @@ jobs:
           sudo -u ubuntu git fetch --all --prune
           sudo -u ubuntu git reset --hard ${COMMIT_SHA}
 
-          # Fetch secrets from SSM (instance role has permission)
+          echo "==> Fetching secrets from SSM"
           MONGO_URI=\$(aws ssm get-parameter --with-decryption --name "/${APP_NAME}/MONGO_URI"  --query Parameter.Value --output text)
           ADMIN_KEY=\$(aws ssm get-parameter --with-decryption --name "/${APP_NAME}/ADMIN_KEY"  --query Parameter.Value --output text)
           JWT_SECRET=\$(aws ssm get-parameter --with-decryption --name "/${APP_NAME}/JWT_SECRET" --query Parameter.Value --output text)
 
-          # Write full .env (atomically, 600 perms)
+          echo "==> Writing .env (0600)"
           umask 077
           cat > "\$BACKEND_DIR/.env.new" <<ENV
           NODE_ENV=production
@@ -217,17 +241,28 @@ jobs:
           chown ubuntu:ubuntu "\$BACKEND_DIR/.env.new"
           mv "\$BACKEND_DIR/.env.new" "\$BACKEND_DIR/.env"
 
-          # Install deps + reload pm2 as ubuntu user.
-          # Delete any stale 'resumeright' app from the first-boot bootstrap (it
-          # was started from the wrong cwd and will crash-loop) before starting
-          # the real one from \$BACKEND_DIR.
-          sudo -u ubuntu bash -lc "cd \$BACKEND_DIR && npm ci --omit=dev"
+          echo "==> Installing deps + starting pm2"
+          # Kill any stale 'resumeright' process from first-boot bootstrap
           sudo -u ubuntu bash -lc "pm2 delete resumeright || true"
+          sudo -u ubuntu bash -lc "cd \$BACKEND_DIR && npm ci --omit=dev"
           sudo -u ubuntu bash -lc "cd \$BACKEND_DIR && pm2 start ecosystem.config.js --update-env"
           sudo -u ubuntu bash -lc "pm2 save"
 
-          # Enable pm2 startup on reboot (idempotent)
-          env PATH=\$PATH:/usr/bin pm2 startup systemd -u ubuntu --hp /home/ubuntu >/dev/null || true
+          # Enable pm2 on reboot (idempotent)
+          env PATH=\$PATH:/usr/bin pm2 startup systemd -u ubuntu --hp /home/ubuntu >/dev/null 2>&1 || true
+
+          echo "==> pm2 status"
+          sudo -u ubuntu pm2 jlist | jq '.[].pm2_env | {name, status, restart_time}'
+
+          echo "==> Local health probe (port 5000)"
+          for i in {1..10}; do
+            if curl -fsS --max-time 3 http://127.0.0.1:5000/healthz; then
+              echo
+              echo "  local healthz OK"
+              break
+            fi
+            sleep 3
+          done
           REMOTE
 
           CMD_ID=$(aws ssm send-command \
@@ -235,22 +270,33 @@ jobs:
             --document-name "AWS-RunShellScript" \
             --comment "ResumeRight deploy ${COMMIT_SHA}" \
             --parameters "commands=$(jq -Rs . < /tmp/remote.sh)" \
-            --timeout-seconds 600 \
+            --timeout-seconds 900 \
             --query "Command.CommandId" \
             --output text)
           echo "SSM command: $CMD_ID"
           echo "cmd_id=$CMD_ID" >> "$GITHUB_OUTPUT"
 
-          # Wait for completion
-          aws ssm wait command-executed --command-id "$CMD_ID" --instance-id "$INSTANCE_ID"
+          # Poll until done (InProgress / Pending -> Success / Failed / TimedOut)
+          # We DON'T use `aws ssm wait` because it exits non-zero on Failed and
+          # then `set -e` kills the step before we can print the logs.
+          for i in {1..90}; do
+            STATUS=$(aws ssm get-command-invocation \
+              --command-id "$CMD_ID" --instance-id "$INSTANCE_ID" \
+              --query Status --output text 2>/dev/null || echo "Pending")
+            case "$STATUS" in
+              Success|Failed|Cancelled|TimedOut) break ;;
+            esac
+            echo "  SSM status: $STATUS ($i/90)"
+            sleep 10
+          done
 
-          # Print output (stdout + stderr)
           echo "---- SSM stdout ----"
-          aws ssm get-command-invocation --command-id "$CMD_ID" --instance-id "$INSTANCE_ID" --query StandardOutputContent --output text
+          aws ssm get-command-invocation --command-id "$CMD_ID" --instance-id "$INSTANCE_ID" \
+            --query StandardOutputContent --output text || true
           echo "---- SSM stderr ----"
-          aws ssm get-command-invocation --command-id "$CMD_ID" --instance-id "$INSTANCE_ID" --query StandardErrorContent --output text
-
-          STATUS=$(aws ssm get-command-invocation --command-id "$CMD_ID" --instance-id "$INSTANCE_ID" --query Status --output text)
+          aws ssm get-command-invocation --command-id "$CMD_ID" --instance-id "$INSTANCE_ID" \
+            --query StandardErrorContent --output text || true
+          echo "---- Final status: $STATUS ----"
           [ "$STATUS" = "Success" ] || { echo "SSM deploy failed: $STATUS"; exit 1; }
 
       - name: Health check
