@@ -10,26 +10,36 @@ let db = null;
 async function connect() {
   if (db) return db;
 
-  client = new MongoClient(env.MONGO_URI, {
+  const newClient = new MongoClient(env.MONGO_URI, {
     maxPoolSize: 10,
     minPoolSize: 1,
     serverSelectionTimeoutMS: 5000,
     retryWrites: true,
   });
 
-  await client.connect();
-  db = client.db(env.DB_NAME);
+  try {
+    await newClient.connect();
+    const newDb = newClient.db(env.DB_NAME);
 
-  // Indexes — idempotent, safe to call on every boot
-  await Promise.all([
-    db.collection('users').createIndex({ email: 1 }, { unique: true }),
-    db.collection('leads').createIndex({ createdAt: -1 }),
-    db.collection('leads').createIndex({ email: 1 }),
-    db.collection('leads').createIndex({ status: 1 }),
-  ]);
+    // Indexes — idempotent, safe to call on every boot
+    await Promise.all([
+      newDb.collection('users').createIndex({ email: 1 }, { unique: true }),
+      newDb.collection('leads').createIndex({ createdAt: -1 }),
+      newDb.collection('leads').createIndex({ email: 1 }),
+      newDb.collection('leads').createIndex({ status: 1 }),
+    ]);
 
-  console.log(`✅ Mongo connected (${env.DB_NAME})`);
-  return db;
+    // Only commit to the module-level refs after everything succeeds, so
+    // failures leave db=null (and the retry loop in server.js tries again).
+    client = newClient;
+    db = newDb;
+    console.log(`✅ Mongo connected (${env.DB_NAME})`);
+    return db;
+  } catch (err) {
+    // Best-effort cleanup so we don't leak a connection on failure.
+    try { await newClient.close(); } catch (_) { /* ignore */ }
+    throw err;
+  }
 }
 
 function getDb() {
