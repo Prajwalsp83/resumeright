@@ -289,8 +289,12 @@ resource "aws_lb_target_group" "app" {
   vpc_id   = aws_vpc.main.id
 
   health_check {
-    path                = "/"
-    interval            = 30
+    # /healthz always returns 200 — doesn't touch the database so Mongo hiccups
+    # don't flap the target. `/` queries the DB and can 503, which would make
+    # the ALB mark the target unhealthy even when the app process is fine.
+    path                = "/healthz"
+    matcher             = "200"
+    interval            = 15
     timeout             = 5
     healthy_threshold   = 2
     unhealthy_threshold = 3
