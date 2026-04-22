@@ -204,8 +204,16 @@ jobs:
             sleep 5
           done
 
-          if ! command -v node >/dev/null 2>&1; then
-            # NodeSource 20.x (more reliable than Ubuntu's stale nodejs)
+          # Node 20 is required (backend uses optional chaining, ?.). Some
+          # AMIs ship Node 12 via apt's nodejs package — if that's present,
+          # the old `command -v node` check would short-circuit. So always
+          # check the MAJOR version and upgrade when <20.
+          NODE_MAJOR=\$(node -v 2>/dev/null | sed 's/^v//;s/\\..*//' || echo 0)
+          if [ "\${NODE_MAJOR:-0}" -lt 20 ]; then
+            echo "==> Installing Node 20.x (current major: \$NODE_MAJOR)"
+            # Remove any stale apt nodejs first — NodeSource's setup script
+            # will fail if an older nodejs is holding the /usr/bin/node link.
+            apt-get remove -y nodejs npm libnode72 libnode-dev 2>/dev/null || true
             curl -fsSL https://deb.nodesource.com/setup_20.x | bash -
             apt-get install -y nodejs
           fi
