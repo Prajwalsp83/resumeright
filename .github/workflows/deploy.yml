@@ -2,13 +2,19 @@ name: ResumeRight CI/CD Pipeline
 
 on:
   push:
-    branches: [main]
+    branches:
+      - main
+
   workflow_dispatch:
     inputs:
-      destroy:
-        description: 'Type DESTROY to tear down all infrastructure'
-        required: false
-        default: ''
+      action:
+        description: "Choose action"
+        required: true
+        default: "apply"
+        type: choice
+        options:
+          - apply
+          - destroy
 
 env:
   AWS_REGION: ap-south-1
