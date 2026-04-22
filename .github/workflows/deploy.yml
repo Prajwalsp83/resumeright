@@ -179,7 +179,14 @@ jobs:
           # Build the remote script. Heredoc is safer than JSON array escapes.
           # The script is self-sufficient: it installs node/npm/pm2/git if the
           # bootstrap hasn't finished yet, so the deploy never races the userdata.
+          #
+          # IMPORTANT: SSM AWS-RunShellScript runs each command via /bin/sh,
+          # which on Ubuntu is dash (no `set -o pipefail`, no `{1..N}` brace
+          # expansion, no bashisms). So the OUTER wrapper is pure POSIX sh: it
+          # just writes the real bash script to /tmp/deploy.sh and invokes it
+          # with `bash`. All the bashisms live inside the inner deploy script.
           cat > /tmp/remote.sh <<REMOTE
+          cat > /tmp/deploy.sh <<'DEPLOY_EOF'
           set -euo pipefail
           export DEBIAN_FRONTEND=noninteractive
           export AWS_REGION=${AWS_REGION}
@@ -263,6 +270,9 @@ jobs:
             fi
             sleep 3
           done
+          DEPLOY_EOF
+          chmod +x /tmp/deploy.sh
+          bash /tmp/deploy.sh
           REMOTE
 
           # Build the SSM payload as a proper JSON file. Passing the script
