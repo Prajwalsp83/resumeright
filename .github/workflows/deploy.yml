@@ -265,12 +265,24 @@ jobs:
           done
           REMOTE
 
+          # Build the SSM payload as a proper JSON file. Passing the script
+          # via `--parameters commands=<jq-encoded>` mangles newlines because
+          # shell re-parses the escapes. `--cli-input-json` with jq-built JSON
+          # preserves newlines correctly.
+          jq -n \
+            --arg instance "$INSTANCE_ID" \
+            --arg comment  "ResumeRight deploy ${COMMIT_SHA}" \
+            --rawfile script /tmp/remote.sh \
+            '{
+              InstanceIds: [$instance],
+              DocumentName: "AWS-RunShellScript",
+              Comment: $comment,
+              TimeoutSeconds: 900,
+              Parameters: { commands: [$script] }
+            }' > /tmp/ssm-payload.json
+
           CMD_ID=$(aws ssm send-command \
-            --instance-ids "$INSTANCE_ID" \
-            --document-name "AWS-RunShellScript" \
-            --comment "ResumeRight deploy ${COMMIT_SHA}" \
-            --parameters "commands=$(jq -Rs . < /tmp/remote.sh)" \
-            --timeout-seconds 900 \
+            --cli-input-json file:///tmp/ssm-payload.json \
             --query "Command.CommandId" \
             --output text)
           echo "SSM command: $CMD_ID"
