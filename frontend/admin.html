@@ -362,7 +362,7 @@ async function updateStatus(id, status){
   }catch(e){console.error(e);}
 }
 
-function showDetail(id){
+async function showDetail(id){
   const l = allLeads.find(l=>l.id===id);
   if(!l) return;
   document.getElementById('dm-name').textContent = l.name || 'Lead Details';
@@ -376,11 +376,24 @@ function showDetail(id){
   document.getElementById('dm-status').textContent = l.status || 'New';
   document.getElementById('dm-date').textContent = fmtDate(l.createdAt||l.submitted||l.uploadedAt);
 
-  // Resume file link
+  // Resume file link — fetched on demand because the signed URL is short-lived
+  // (10min TTL) and only the /admin/leads/:id endpoint returns it. This keeps
+  // the list endpoint cheap (no presign calls per row) and links always fresh.
   const resumeDiv = document.getElementById('dm-resume');
-  if(l.fileUrl || l.originalName){
-    const url = l.fileUrl || `http://52.66.211.217:5000/uploads/${l.savedAs}`;
-    resumeDiv.innerHTML = `<a href="${url}" target="_blank">📄 ${l.originalName||'View Resume'} ↗</a>`;
+  if(l.s3Key || l.originalName){
+    resumeDiv.innerHTML = '<span style="opacity:0.6">Loading link…</span>';
+    try{
+      const r = await apiFetch(`/admin/leads/${id}`);
+      const d = await r.json();
+      const url = d.lead && d.lead.fileUrl;
+      if(url){
+        resumeDiv.innerHTML = `<a href="${url}" target="_blank" rel="noopener">📄 ${l.originalName||'View Resume'} ↗</a>`;
+      } else {
+        resumeDiv.textContent = l.originalName ? `${l.originalName} (file not available)` : '—';
+      }
+    }catch(e){
+      resumeDiv.textContent = 'Failed to load link';
+    }
   } else {
     resumeDiv.textContent = '—';
   }

@@ -640,6 +640,24 @@ footer{padding:28px 6vw;text-align:center;border-top:1px solid var(--border);}
 // For local dev, overwrite it manually or run a local backend at http://localhost:5000.
 const API = '__API_URL__';
 let currentUser = JSON.parse(localStorage.getItem('rr_user')||'null');
+let authToken   = localStorage.getItem('rr_token') || '';
+
+// Authenticated fetch helper — injects Bearer token on every request.
+// On 401, clears auth + opens login modal so the user can re-auth.
+async function apiFetch(path, opts = {}) {
+  const headers = { ...(opts.headers || {}) };
+  if (authToken) headers['Authorization'] = `Bearer ${authToken}`;
+  const r = await fetch(API + path, { ...opts, headers });
+  if (r.status === 401) {
+    localStorage.removeItem('rr_user');
+    localStorage.removeItem('rr_token');
+    currentUser = null; authToken = '';
+    updateNav();
+    openModal('login');
+    throw new Error('Session expired. Please log in again.');
+  }
+  return r;
+}
 
 function updateNav(){
   if(currentUser){
@@ -698,29 +716,47 @@ async function handleAuth(){
     const d=await r.json();
     if(!r.ok){msg.textContent=d.error||'Failed';msg.className='modal-msg error';btn.disabled=false;btn.textContent=authMode==='login'?'Login':'Create Account';return;}
     currentUser=d.user;
+    authToken=d.token||'';
     localStorage.setItem('rr_user',JSON.stringify(currentUser));
+    if(authToken) localStorage.setItem('rr_token',authToken);
     msg.textContent=(authMode==='register'?'Account created! Welcome, ':'Welcome back, ')+currentUser.name+'!';
     msg.className='modal-msg success';
     setTimeout(()=>{closeModal();updateNav();if(authMode==='register')document.getElementById('uploadSection').scrollIntoView({behavior:'smooth'});},1200);
   }catch(e){msg.textContent='Connection error.';msg.className='modal-msg error';btn.disabled=false;btn.textContent=authMode==='login'?'Login':'Create Account';}
 }
-function logout(){if(confirm('Logout?')){localStorage.removeItem('rr_user');currentUser=null;updateNav();}}
+function logout(){if(confirm('Logout?')){localStorage.removeItem('rr_user');localStorage.removeItem('rr_token');currentUser=null;authToken='';updateNav();}}
 
 // Upload
 async function handleUpload(input){
   if(!input.files[0])return;
+  if(!currentUser||!authToken){alert('Please login first.');openModal('login');return;}
+  const file=input.files[0];
+  // Client-side guardrails — mirror backend limits so users get immediate feedback.
+  const MAX_MB=10;
+  if(file.size>MAX_MB*1024*1024){alert(`File too large. Max ${MAX_MB}MB.`);input.value='';return;}
+  const okExt=/\.(pdf|doc|docx|txt|rtf|odt|png|jpe?g)$/i;
+  if(!okExt.test(file.name)){alert('Unsupported file type. Use PDF, DOC, DOCX, TXT, RTF, or image.');input.value='';return;}
+
   const prog=document.getElementById('uploadProgress');
   const fill=document.getElementById('progressFill');
   const done=document.getElementById('uploadDone');
   prog.style.display='block';done.style.display='none';
   let w=0;const iv=setInterval(()=>{w+=Math.random()*12;if(w>=85){w=85;clearInterval(iv);}fill.style.width=w+'%';},120);
   try{
-    const fd=new FormData();fd.append('resume',input.files[0]);
-    if(currentUser)fd.append('email',currentUser.email);
-    await fetch(API+'/upload',{method:'POST',body:fd});
-    clearInterval(iv);fill.style.width='100%';
+    const fd=new FormData();fd.append('resume',file);
+    // Don't set Content-Type — browser picks the right multipart boundary.
+    const r=await apiFetch('/upload',{method:'POST',body:fd});
+    const d=await r.json().catch(()=>({}));
+    clearInterval(iv);
+    if(!r.ok||!d.success){
+      prog.style.display='none';
+      alert('Upload failed: '+(d.error||`HTTP ${r.status}`));
+      input.value='';
+      return;
+    }
+    fill.style.width='100%';
     setTimeout(()=>{prog.style.display='none';done.style.display='block';},400);
-  }catch(e){clearInterval(iv);prog.style.display='none';alert('Upload failed.');}
+  }catch(e){clearInterval(iv);prog.style.display='none';alert('Upload failed: '+e.message);input.value='';}
 }
 
 // Lead form
