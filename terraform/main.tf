@@ -1,7 +1,16 @@
 ###############################################################################
 # ResumeRight — Infrastructure as Code
+# Minimal single-EC2 stack. No ALB, no ASG, no NAT Gateway.
+#
 # Run:   terraform init && terraform apply
 # Nuke:  terraform destroy  (also triggered via GitHub Actions approval gate)
+#
+# Costs at idle (ap-south-1):
+#   t3.micro          ~$7.6/mo  (free-tier eligible for 12 months)
+#   Elastic IP        $0 when attached; $3.6/mo if unattached
+#   CloudFront (x2)   ~$0 at low traffic (pay per request, HTTPS termination)
+#   S3 + SSM params   cents
+# Total: ~$8/mo during free tier, ~$15/mo after.
 ###############################################################################
 
 terraform {
@@ -80,7 +89,7 @@ resource "aws_ssm_parameter" "jwt_secret" {
 data "aws_caller_identity" "me" {}
 
 ###############################################################################
-# VPC & NETWORKING
+# VPC & NETWORKING — single public subnet is enough for a single EC2.
 ###############################################################################
 resource "aws_vpc" "main" {
   cidr_block           = "10.0.0.0/16"
@@ -97,12 +106,11 @@ resource "aws_internet_gateway" "igw" {
 data "aws_availability_zones" "available" { state = "available" }
 
 resource "aws_subnet" "public" {
-  count                   = 2
   vpc_id                  = aws_vpc.main.id
-  cidr_block              = "10.0.${count.index}.0/24"
-  availability_zone       = data.aws_availability_zones.available.names[count.index]
+  cidr_block              = "10.0.0.0/24"
+  availability_zone       = data.aws_availability_zones.available.names[0]
   map_public_ip_on_launch = true
-  tags = merge(local.tags, { Name = "${var.app_name}-public-${count.index}" })
+  tags = merge(local.tags, { Name = "${var.app_name}-public" })
 }
 
 resource "aws_route_table" "public" {
@@ -115,58 +123,49 @@ resource "aws_route_table" "public" {
 }
 
 resource "aws_route_table_association" "public" {
-  count          = 2
-  subnet_id      = aws_subnet.public[count.index].id
+  subnet_id      = aws_subnet.public.id
   route_table_id = aws_route_table.public.id
 }
 
 ###############################################################################
-# SECURITY GROUPS
+# SECURITY GROUP
+# Ingress:
+#   5000  → 0.0.0.0/0  (CloudFront fronts it; EC2 direct is only for debugging)
+#   22    → 0.0.0.0/0  (SSH optional — remove if you only use SSM Session Mgr)
+# Egress: all (needed for Atlas, npm, git, SSM).
 ###############################################################################
-resource "aws_security_group" "alb" {
-  name   = "${var.app_name}-alb-sg"
-  vpc_id = aws_vpc.main.id
-  ingress {
-    from_port   = 80
-    to_port     = 80
-    protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-  ingress {
-    from_port   = 443
-    to_port     = 443
-    protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-  egress {
-    from_port   = 0
-    to_port     = 0
-    protocol    = "-1"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-  tags = merge(local.tags, { Name = "${var.app_name}-alb-sg" })
-}
-
 resource "aws_security_group" "ec2" {
   name   = "${var.app_name}-ec2-sg"
   vpc_id = aws_vpc.main.id
+
   ingress {
-    from_port       = 5000
-    to_port         = 5000
-    protocol        = "tcp"
-    security_groups = [aws_security_group.alb.id]
+    description = "App port (CloudFront origin)"
+    from_port   = 5000
+    to_port     = 5000
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
   }
+
+  ingress {
+    description = "SSH (optional — prefer SSM Session Manager)"
+    from_port   = 22
+    to_port     = 22
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
   egress {
     from_port   = 0
     to_port     = 0
     protocol    = "-1"
     cidr_blocks = ["0.0.0.0/0"]
   }
+
   tags = merge(local.tags, { Name = "${var.app_name}-ec2-sg" })
 }
 
 ###############################################################################
-# IAM — EC2 can use SSM
+# IAM — EC2 can use SSM + read app secrets + R/W uploads bucket
 ###############################################################################
 data "aws_iam_policy_document" "ec2_assume" {
   statement {
@@ -189,7 +188,6 @@ resource "aws_iam_role_policy_attachment" "ssm" {
   policy_arn = "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore"
 }
 
-# Inline policy: read app SSM params + R/W on private uploads bucket.
 data "aws_iam_policy_document" "ec2_inline" {
   statement {
     sid     = "ReadAppParams"
@@ -227,7 +225,9 @@ resource "aws_iam_instance_profile" "ec2" {
 }
 
 ###############################################################################
-# LAUNCH TEMPLATE
+# EC2 INSTANCE
+# Plain aws_instance — no ASG, no launch template. Single box, smallest AMI.
+# If it dies, `terraform apply` recreates it (ok for MVP; revisit post-revenue).
 ###############################################################################
 data "aws_ami" "ubuntu" {
   most_recent = true
@@ -238,106 +238,52 @@ data "aws_ami" "ubuntu" {
   }
 }
 
-resource "aws_launch_template" "app" {
-  name_prefix   = "${var.app_name}-lt-"
-  image_id      = data.aws_ami.ubuntu.id
-  instance_type = "t3.micro"
-
-  iam_instance_profile { name = aws_iam_instance_profile.ec2.name }
-
+resource "aws_instance" "app" {
+  ami                    = data.aws_ami.ubuntu.id
+  instance_type          = "t3.micro"
+  subnet_id              = aws_subnet.public.id
   vpc_security_group_ids = [aws_security_group.ec2.id]
+  iam_instance_profile   = aws_iam_instance_profile.ec2.name
 
-  # Extra keys (jwt_secret, github_repo, aws_region, uploads_bucket, cors_origins)
-  # are passed eagerly so a future bootstrap rewrite that fetches from SSM / writes
-  # a full .env works without another Terraform round-trip. The current bootstrap
-  # only references mongo_uri/admin_key/app_name; unreferenced keys are ignored.
-  user_data = base64encode(templatefile("${path.module}/bootstrap.sh", {
-    mongo_uri      = var.mongo_uri
-    admin_key      = var.admin_key
-    jwt_secret     = var.jwt_secret
-    app_name       = var.app_name
-    aws_region     = var.aws_region
-    uploads_bucket = aws_s3_bucket.uploads.bucket
-    cors_origins   = "https://${aws_cloudfront_distribution.frontend.domain_name}"
-    github_repo    = var.github_repo
-  }))
+  # bootstrap.sh is intentionally minimal — it just ensures the SSM agent is
+  # running so the pipeline can target this instance. The real deploy (node,
+  # npm, git, pm2, repo, .env from SSM, pm2 start) runs from GitHub Actions
+  # via SSM RunCommand and is idempotent.
+  user_data = file("${path.module}/bootstrap.sh")
 
-  tag_specifications {
-    resource_type = "instance"
-    tags          = merge(local.tags, { Name = "${var.app_name}-server" })
+  # Changing user_data should NOT force instance replacement — the pipeline
+  # handles redeploys via SSM, we don't need to cycle the box for code changes.
+  user_data_replace_on_change = false
+
+  root_block_device {
+    volume_size = 16
+    volume_type = "gp3"
+    encrypted   = true
   }
 
-  lifecycle { create_before_destroy = true }
+  # Free auto-recovery: if the underlying host dies, AWS will restart the
+  # instance on healthy hardware. Doesn't protect against app-level crashes
+  # (pm2 handles those) but covers hypervisor failures.
+  maintenance_options {
+    auto_recovery = "default"
+  }
+
+  tags = merge(local.tags, { Name = "${var.app_name}-server" })
 }
 
 ###############################################################################
-# ALB
+# ELASTIC IP — stable public IP so Atlas allowlist stays valid across deploys.
+# The EIP persists across `terraform apply`; only `terraform destroy` releases
+# it. After the first apply, add this IP to Atlas → Network Access once.
 ###############################################################################
-resource "aws_lb" "app" {
-  name               = "${var.app_name}-alb"
-  internal           = false
-  load_balancer_type = "application"
-  security_groups    = [aws_security_group.alb.id]
-  subnets            = aws_subnet.public[*].id
-  tags               = local.tags
+resource "aws_eip" "app" {
+  domain = "vpc"
+  tags   = merge(local.tags, { Name = "${var.app_name}-eip" })
 }
 
-resource "aws_lb_target_group" "app" {
-  name     = "${var.app_name}-tg"
-  port     = 5000
-  protocol = "HTTP"
-  vpc_id   = aws_vpc.main.id
-
-  health_check {
-    # /healthz always returns 200 — doesn't touch the database so Mongo hiccups
-    # don't flap the target. `/` queries the DB and can 503, which would make
-    # the ALB mark the target unhealthy even when the app process is fine.
-    path                = "/healthz"
-    matcher             = "200"
-    interval            = 15
-    timeout             = 5
-    healthy_threshold   = 2
-    unhealthy_threshold = 3
-  }
-  tags = local.tags
-}
-
-resource "aws_lb_listener" "http" {
-  load_balancer_arn = aws_lb.app.arn
-  port              = 80
-  protocol          = "HTTP"
-  default_action {
-    type             = "forward"
-    target_group_arn = aws_lb_target_group.app.arn
-  }
-}
-
-###############################################################################
-# AUTO SCALING GROUP
-###############################################################################
-resource "aws_autoscaling_group" "app" {
-  name                = "${var.app_name}-asg"
-  min_size            = 1
-  max_size            = 3
-  desired_capacity    = 1
-  vpc_zone_identifier = aws_subnet.public[*].id
-
-  launch_template {
-    id      = aws_launch_template.app.id
-    version = "$Latest"
-  }
-
-  target_group_arns         = [aws_lb_target_group.app.arn]
-  health_check_type         = "EC2"
-  health_check_grace_period = 300
-
-  tag {
-    key                 = "Name"
-    value               = "${var.app_name}-server"
-    propagate_at_launch = true
-  }
-
-  lifecycle { create_before_destroy = true }
+resource "aws_eip_association" "app" {
+  instance_id   = aws_instance.app.id
+  allocation_id = aws_eip.app.id
 }
 
 ###############################################################################
@@ -379,7 +325,6 @@ resource "aws_s3_bucket_policy" "frontend" {
   })
 }
 
-# Upload frontend files
 resource "aws_s3_object" "index" {
   bucket       = aws_s3_bucket.frontend.id
   key          = "index.html"
@@ -431,7 +376,11 @@ resource "aws_s3_bucket_lifecycle_configuration" "uploads" {
 }
 
 ###############################################################################
-# CLOUDFRONT
+# CLOUDFRONT — frontend (S3 static site) + API (EC2 via EIP)
+# CloudFront gives us free TLS termination; the browser never touches the
+# backend over plain HTTP. We keep it because it's pay-per-request (near $0
+# at low traffic) and it's the only reason the app can use HTTPS without
+# managing certs on the EC2.
 ###############################################################################
 resource "aws_cloudfront_distribution" "frontend" {
   enabled             = true
@@ -473,12 +422,15 @@ resource "aws_cloudfront_distribution" "api" {
   price_class = "PriceClass_200"
   tags        = local.tags
 
+  # Origin = EIP's stable public DNS name. That hostname resolves to the same
+  # IP forever (EIP is static), so CloudFront keeps working across EC2
+  # replacements as long as the EIP stays associated.
   origin {
-    domain_name = aws_lb.app.dns_name
-    origin_id   = "alb-backend"
+    domain_name = aws_eip.app.public_dns
+    origin_id   = "ec2-backend"
     custom_origin_config {
-      http_port              = 80
-      https_port             = 443
+      http_port              = 5000
+      https_port             = 443 # unused (origin_protocol_policy = http-only)
       origin_protocol_policy = "http-only"
       origin_ssl_protocols   = ["TLSv1.2"]
     }
@@ -487,9 +439,15 @@ resource "aws_cloudfront_distribution" "api" {
   default_cache_behavior {
     allowed_methods        = ["DELETE","GET","HEAD","OPTIONS","PATCH","POST","PUT"]
     cached_methods         = ["GET","HEAD"]
-    target_origin_id       = "alb-backend"
+    target_origin_id       = "ec2-backend"
     viewer_protocol_policy = "redirect-to-https"
-    cache_policy_id        = "4135ea2d-6df8-44a3-9df3-4b5a84be39ad" # CachingDisabled
+    # CachingDisabled — never cache API responses.
+    cache_policy_id          = "4135ea2d-6df8-44a3-9df3-4b5a84be39ad"
+    # AllViewerExceptHostHeader — forward Authorization, cookies, query strings,
+    # and all other viewer headers, but let CloudFront set Host = origin host
+    # (the EIP DNS). The Node backend doesn't care about Host header, so this
+    # keeps JWT auth (Authorization header) working.
+    origin_request_policy_id = "b689b0a8-53d0-40ab-baf2-68738e2966ac"
   }
 
   restrictions {
@@ -504,8 +462,16 @@ resource "aws_cloudfront_distribution" "api" {
 ###############################################################################
 output "frontend_url"    { value = "https://${aws_cloudfront_distribution.frontend.domain_name}" }
 output "api_url"         { value = "https://${aws_cloudfront_distribution.api.domain_name}" }
-output "alb_dns"         { value = aws_lb.app.dns_name }
 output "s3_bucket"       { value = aws_s3_bucket.frontend.bucket }
 output "uploads_bucket"  { value = aws_s3_bucket.uploads.bucket }
 output "cf_frontend_id"  { value = aws_cloudfront_distribution.frontend.id }
 output "cf_api_id"       { value = aws_cloudfront_distribution.api.id }
+
+# EC2 identity — the pipeline uses instance_id to target SSM RunCommand.
+output "instance_id"     { value = aws_instance.app.id }
+
+# Stable public IP. Add this to MongoDB Atlas → Network Access once; it stays
+# the same across every `terraform apply` (only `terraform destroy` releases
+# it). This is what Atlas sees as the client IP when the backend connects.
+output "ec2_public_ip"   { value = aws_eip.app.public_ip }
+output "ec2_public_dns"  { value = aws_eip.app.public_dns }

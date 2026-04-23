@@ -192,21 +192,66 @@ tr:hover td{background:rgba(255,255,255,.02);}
 
 <script>
 const API = 'https://d2yotzdt9w6dsh.cloudfront.net';
-const ADMIN_KEY = 'resumeright2026';
-let allLeads = [], allUsers = [];
+let allLeads = [], allUsers = [], refreshTimer = null;
 
-function adminLogin(){
-  const k = document.getElementById('keyInput').value.trim();
-  if(k === ADMIN_KEY){
-    document.getElementById('loginScreen').style.display='none';
-    document.getElementById('dashboard').style.display='block';
+// JWT is kept in sessionStorage so it disappears on tab close. We never
+// persist the raw admin key — only the short-lived (12h) token the backend
+// issues after /admin/login.
+const TOKEN_KEY = 'rr_admin_jwt';
+const getToken = () => sessionStorage.getItem(TOKEN_KEY);
+const setToken = t => sessionStorage.setItem(TOKEN_KEY, t);
+const clearToken = () => sessionStorage.removeItem(TOKEN_KEY);
+
+function authHeaders(extra = {}) {
+  return { Authorization: `Bearer ${getToken()}`, ...extra };
+}
+
+// Centralised fetch wrapper so any 401 boots the admin back to the login
+// screen instead of silently failing.
+async function apiFetch(path, opts = {}) {
+  const r = await fetch(`${API}${path}`, {
+    ...opts,
+    headers: { ...authHeaders(), ...(opts.headers || {}) },
+  });
+  if (r.status === 401 || r.status === 403) {
+    clearToken();
+    adminLogout();
+    throw new Error('Session expired');
+  }
+  return r;
+}
+
+async function adminLogin(){
+  const key = document.getElementById('keyInput').value.trim();
+  const errEl = document.getElementById('loginErr');
+  errEl.textContent = '';
+  if(!key){ errEl.textContent = 'Enter the admin key.'; return; }
+  try {
+    const r = await fetch(`${API}/admin/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ key }),
+    });
+    const d = await r.json().catch(()=>({}));
+    if(!r.ok || !d.token){
+      errEl.textContent = d.error || 'Invalid admin key.';
+      return;
+    }
+    setToken(d.token);
+    document.getElementById('keyInput').value = '';
+    document.getElementById('loginScreen').style.display = 'none';
+    document.getElementById('dashboard').style.display = 'block';
     loadLeads(); loadUsers();
-    setInterval(()=>{loadLeads();loadUsers();}, 30000);
-  } else {
-    document.getElementById('loginErr').textContent='Invalid admin key.';
+    if(refreshTimer) clearInterval(refreshTimer);
+    refreshTimer = setInterval(()=>{loadLeads();loadUsers();}, 30000);
+  } catch (e) {
+    errEl.textContent = 'Network error — try again.';
   }
 }
+
 function adminLogout(){
+  clearToken();
+  if(refreshTimer){ clearInterval(refreshTimer); refreshTimer = null; }
   document.getElementById('loginScreen').style.display='flex';
   document.getElementById('dashboard').style.display='none';
   document.getElementById('keyInput').value='';
@@ -214,7 +259,7 @@ function adminLogout(){
 
 async function loadLeads(){
   try{
-    const r = await fetch(`${API}/admin/leads?key=${ADMIN_KEY}`);
+    const r = await apiFetch('/admin/leads');
     const d = await r.json();
     allLeads = d.leads || [];
     updateStats(); renderTable();
@@ -222,7 +267,7 @@ async function loadLeads(){
 }
 async function loadUsers(){
   try{
-    const r = await fetch(`${API}/admin/users?key=${ADMIN_KEY}`);
+    const r = await apiFetch('/admin/users');
     const d = await r.json();
     allUsers = d.users || [];
     renderUsers();
@@ -308,7 +353,7 @@ function renderUsers(){
 
 async function updateStatus(id, status){
   try{
-    await fetch(`${API}/admin/leads/${id}?key=${ADMIN_KEY}`,{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({status})});
+    await apiFetch(`/admin/leads/${id}`,{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({status})});
     const lead = allLeads.find(l=>l.id===id);
     if(lead) lead.status=status;
     updateStats();

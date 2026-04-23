@@ -1,30 +1,16 @@
 #!/bin/bash
+# Minimal first-boot script. The real deploy (install node/npm/pm2, clone repo,
+# fetch SSM secrets, write .env, start pm2) runs from the GitHub Actions
+# pipeline via SSM RunCommand — see .github/workflows/deploy.yml. Keeping this
+# script tiny means bootstrap failures never block a deploy.
 set -e
-
 exec > /var/log/user-data.log 2>&1
 
-echo "🚀 Starting setup..."
+echo "[$(date -Is)] cloud-init starting"
 
-apt update -y
-apt install -y nodejs npm git
+# Ubuntu 22.04 ships with the SSM agent pre-installed. Just make sure it's
+# enabled + running so the deploy can target this instance immediately.
+systemctl enable amazon-ssm-agent >/dev/null 2>&1 || true
+systemctl start amazon-ssm-agent  >/dev/null 2>&1 || true
 
-npm install -g pm2
-
-cd /home/ubuntu
-
-# Clone your repo (IMPORTANT: use correct URL)
-if [ ! -d "backend" ]; then
-  git clone https://github.com/Prajwalsp83/resumeright.git backend
-fi
-
-cd backend
-
-npm install
-
-# Set env
-echo "MONGO_URI=${mongo_uri}" > .env
-echo "ADMIN_KEY=${admin_key}" >> .env
-
-# Start app
-pm2 start server.js --name resumeright
-pm2 save
+echo "[$(date -Is)] ready for SSM deploy"
