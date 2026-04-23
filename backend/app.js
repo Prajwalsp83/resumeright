@@ -14,6 +14,12 @@ const {
   requireAuth,
 } = require('./auth');
 const { s3Enabled, buildUploader, signedUrlForKey } = require('./s3');
+const {
+  razorpayEnabled,
+  createOrder: createRzpOrder,
+  verifyCheckoutSignature,
+  verifyWebhookSignature,
+} = require('./payments');
 
 const app = express();
 app.set('trust proxy', 1); // trust ALB + CloudFront
@@ -33,6 +39,47 @@ app.use(cors({
   methods: ['GET', 'POST', 'PATCH', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
 }));
+
+// ─── Razorpay webhook (raw body BEFORE express.json) ───────────────────────
+// Webhook signature = HMAC-SHA256 of the EXACT request bytes, so we must
+// capture the raw body before any JSON parsing middleware runs.
+app.post('/payments/webhook',
+  express.raw({ type: 'application/json', limit: '1mb' }),
+  async (req, res) => {
+    try {
+      const signature = req.headers['x-razorpay-signature'] || '';
+      const rawBody   = req.body; // Buffer
+      if (!verifyWebhookSignature(rawBody, signature)) {
+        return res.status(400).json({ error: 'Invalid signature' });
+      }
+
+      const event = JSON.parse(rawBody.toString('utf8'));
+      const payment = event?.payload?.payment?.entity;
+      const orderId = payment?.order_id;
+
+      if (event.event === 'payment.captured' && orderId) {
+        // Idempotent: update by orderId; won't double-apply if webhook retries.
+        await getDb().collection('leads').updateOne(
+          { razorpayOrderId: orderId },
+          {
+            $set: {
+              status:             'Paid',
+              razorpayPaymentId:  payment.id,
+              paidAt:             new Date(),
+              paidAmount:         payment.amount / 100,
+              paymentMethod:      payment.method,
+              updatedAt:          new Date(),
+            },
+          },
+        );
+      }
+      res.json({ ok: true });
+    } catch (e) {
+      console.error('[webhook]', e.message);
+      res.status(500).json({ error: 'Webhook handler error' });
+    }
+  },
+);
 
 app.use(express.json({ limit: '1mb' }));
 
@@ -69,7 +116,7 @@ app.get('/', async (_req, res) => {
       db.collection('leads').countDocuments(),
       db.collection('users').countDocuments(),
     ]);
-    res.json({ status: 'ResumeRight backend OK', leads, users, s3: s3Enabled });
+    res.json({ status: 'ResumeRight backend OK', leads, users, s3: s3Enabled, razorpay: razorpayEnabled });
   } catch (e) {
     res.status(503).json({ status: 'DB error', error: e.message });
   }
@@ -190,6 +237,107 @@ app.post('/upload', requireAuth('user'), (req, res, next) => {
 });
 
 // ═══════════════════════════════════════════════════════════════════════════
+// PAYMENTS — Razorpay
+// Flow:
+//   1. Frontend POSTs /payments/order with { packageName, amount, name, email, phone }
+//   2. Backend creates Razorpay order + a 'Pending Payment' lead; returns
+//      { keyId, orderId, amount, currency, leadId }
+//   3. Frontend opens Razorpay Checkout with that orderId
+//   4. On success, Razorpay calls frontend's handler → POST /payments/verify
+//      with { orderId, paymentId, signature, leadId }
+//   5. Backend verifies HMAC; on match, marks lead 'Paid'
+//   6. (Server-to-server safety net) Razorpay webhook → /payments/webhook
+//      also marks the lead 'Paid' (idempotent — safe if verify already ran)
+// ═══════════════════════════════════════════════════════════════════════════
+const paymentLimiter = rateLimit({ windowMs: 60 * 1000, max: 10, standardHeaders: true });
+
+app.post('/payments/order', paymentLimiter, async (req, res, next) => {
+  try {
+    if (!razorpayEnabled) return bad(res, 'Payments not configured', 503);
+
+    const packageName = trim(req.body.packageName);
+    // Accept either `amount` or `amountInr` for convenience
+    const amount      = Number(req.body.amount ?? req.body.amountInr);
+    const name        = trim(req.body.name);
+    const email       = trim(req.body.email).toLowerCase();
+    const phone       = trim(req.body.phone);
+
+    if (!packageName)                   return bad(res, 'Package is required');
+    if (!Number.isFinite(amount) || amount < 1 || amount > 100000) {
+      return bad(res, 'Invalid amount');
+    }
+    if (name && !emailRe.test(email))   return bad(res, 'Valid email is required');
+
+    // Pre-create a lead in 'Pending Payment' state so even abandoned checkouts
+    // are visible in admin (great for re-targeting).
+    const leadDoc = {
+      name:    name  || 'Anonymous',
+      email:   email || '',
+      phone:   phone || '',
+      service: packageName,
+      status:  'Pending Payment',
+      amount,
+      source:  'razorpay-checkout',
+      createdAt: new Date(),
+    };
+    const { insertedId: leadId } = await getDb().collection('leads').insertOne(leadDoc);
+
+    const order = await createRzpOrder({
+      amountInr: amount,
+      receipt:   `rr_${leadId.toString().slice(-12)}`,
+      notes:     { packageName, leadId: leadId.toString(), email, phone },
+    });
+
+    await getDb().collection('leads').updateOne(
+      { _id: leadId },
+      { $set: { razorpayOrderId: order.id, updatedAt: new Date() } },
+    );
+
+    res.json({
+      keyId:    env.RAZORPAY_KEY_ID,
+      orderId:  order.id,
+      amount:   order.amount,     // in paise
+      currency: order.currency,
+      leadId:   leadId.toString(),
+    });
+  } catch (e) { next(e); }
+});
+
+app.post('/payments/verify', paymentLimiter, async (req, res, next) => {
+  try {
+    if (!razorpayEnabled) return bad(res, 'Payments not configured', 503);
+
+    // Accept both camelCase and Razorpay's native snake_case keys.
+    const orderId   = trim(req.body.orderId   || req.body.razorpay_order_id);
+    const paymentId = trim(req.body.paymentId || req.body.razorpay_payment_id);
+    const signature = trim(req.body.signature || req.body.razorpay_signature);
+    const leadId    = trim(req.body.leadId);
+
+    if (!orderId || !paymentId || !signature) {
+      return bad(res, 'Missing payment fields');
+    }
+
+    const ok = verifyCheckoutSignature({ orderId, paymentId, signature });
+    if (!ok) return bad(res, 'Signature verification failed', 400);
+
+    // Match by orderId (authoritative) — leadId is a convenience hint.
+    const filter = { razorpayOrderId: orderId };
+    if (leadId && ObjectId.isValid(leadId)) filter._id = new ObjectId(leadId);
+
+    await getDb().collection('leads').updateOne(filter, {
+      $set: {
+        status:            'Paid',
+        razorpayPaymentId: paymentId,
+        paidAt:            new Date(),
+        updatedAt:         new Date(),
+      },
+    });
+
+    res.json({ success: true });
+  } catch (e) { next(e); }
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
 // ADMIN — key-to-JWT login, then JWT on every request
 // ═══════════════════════════════════════════════════════════════════════════
 app.post('/admin/login', authLimiter, (req, res) => {
@@ -226,7 +374,7 @@ app.get('/admin/leads/:id', requireAuth('admin'), async (req, res, next) => {
 app.patch('/admin/leads/:id', requireAuth('admin'), async (req, res, next) => {
   try {
     if (!ObjectId.isValid(req.params.id)) return bad(res, 'Invalid id');
-    const allowed = ['New', 'Resume Uploaded', 'In Progress', 'Completed', 'Paid', 'Lost'];
+    const allowed = ['New', 'Resume Uploaded', 'In Progress', 'Pending Payment', 'Paid', 'Completed', 'Lost'];
     const status = trim(req.body.status);
     if (!allowed.includes(status)) return bad(res, 'Invalid status');
     await getDb().collection('leads').updateOne(

@@ -96,6 +96,9 @@ jobs:
             -var="mongo_uri=${{ secrets.MONGO_URI }}" \
             -var="admin_key=${{ secrets.ADMIN_KEY }}" \
             -var="jwt_secret=${{ secrets.JWT_SECRET }}" \
+            -var="razorpay_key_id=${{ secrets.RAZORPAY_KEY_ID }}" \
+            -var="razorpay_key_secret=${{ secrets.RAZORPAY_KEY_SECRET }}" \
+            -var="razorpay_webhook_secret=${{ secrets.RAZORPAY_WEBHOOK_SECRET }}" \
             -var="github_repo=https://github.com/${{ github.repository }}.git" \
             -out=tfplan
         working-directory: ${{ env.TF_DIR }}
@@ -248,6 +251,11 @@ jobs:
           ADMIN_KEY=\$(aws ssm get-parameter --with-decryption --name "/${APP_NAME}/ADMIN_KEY"  --query Parameter.Value --output text)
           JWT_SECRET=\$(aws ssm get-parameter --with-decryption --name "/${APP_NAME}/JWT_SECRET" --query Parameter.Value --output text)
 
+          # Razorpay — optional. Missing param = empty string (payments disabled).
+          RAZORPAY_KEY_ID=\$(aws ssm get-parameter --with-decryption --name "/${APP_NAME}/RAZORPAY_KEY_ID" --query Parameter.Value --output text 2>/dev/null || echo "")
+          RAZORPAY_KEY_SECRET=\$(aws ssm get-parameter --with-decryption --name "/${APP_NAME}/RAZORPAY_KEY_SECRET" --query Parameter.Value --output text 2>/dev/null || echo "")
+          RAZORPAY_WEBHOOK_SECRET=\$(aws ssm get-parameter --with-decryption --name "/${APP_NAME}/RAZORPAY_WEBHOOK_SECRET" --query Parameter.Value --output text 2>/dev/null || echo "")
+
           echo "==> Writing .env (0600)"
           umask 077
           cat > "\$BACKEND_DIR/.env.new" <<ENV
@@ -264,6 +272,9 @@ jobs:
           CORS_ORIGINS=${FRONTEND_URL}
           RATE_LIMIT_WINDOW_MS=900000
           RATE_LIMIT_MAX=100
+          RAZORPAY_KEY_ID=\$RAZORPAY_KEY_ID
+          RAZORPAY_KEY_SECRET=\$RAZORPAY_KEY_SECRET
+          RAZORPAY_WEBHOOK_SECRET=\$RAZORPAY_WEBHOOK_SECRET
           ENV
           chown ubuntu:ubuntu "\$BACKEND_DIR/.env.new"
           mv "\$BACKEND_DIR/.env.new" "\$BACKEND_DIR/.env"
@@ -510,6 +521,9 @@ jobs:
             -var="mongo_uri=${{ secrets.MONGO_URI }}" \
             -var="admin_key=${{ secrets.ADMIN_KEY }}" \
             -var="jwt_secret=${{ secrets.JWT_SECRET }}" \
+            -var="razorpay_key_id=${{ secrets.RAZORPAY_KEY_ID }}" \
+            -var="razorpay_key_secret=${{ secrets.RAZORPAY_KEY_SECRET }}" \
+            -var="razorpay_webhook_secret=${{ secrets.RAZORPAY_WEBHOOK_SECRET }}" \
             -var="github_repo=https://github.com/${{ github.repository }}.git"
         working-directory: ${{ env.TF_DIR }}
 

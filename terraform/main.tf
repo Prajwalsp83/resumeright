@@ -48,6 +48,24 @@ variable "jwt_secret" {
   description = "Secret used to sign JWTs (min 32 chars)"
   sensitive   = true
 }
+variable "razorpay_key_id" {
+  description = "Razorpay Key ID (rzp_test_* or rzp_live_*). Leave empty to disable payments."
+  type        = string
+  default     = ""
+  sensitive   = true
+}
+variable "razorpay_key_secret" {
+  description = "Razorpay Key Secret. Leave empty to disable payments."
+  type        = string
+  default     = ""
+  sensitive   = true
+}
+variable "razorpay_webhook_secret" {
+  description = "Razorpay Webhook Secret for /payments/webhook signature verification."
+  type        = string
+  default     = ""
+  sensitive   = true
+}
 variable "github_repo" {
   description = "HTTPS URL of the repo (e.g. https://github.com/user/resumeright.git)"
   type        = string
@@ -83,6 +101,32 @@ resource "aws_ssm_parameter" "jwt_secret" {
   name  = "/${var.app_name}/JWT_SECRET"
   type  = "SecureString"
   value = var.jwt_secret
+  tags  = local.tags
+}
+
+# Razorpay — created only if values are set. Empty string would fail the
+# SSM API validation (it requires non-empty), so we guard with count.
+resource "aws_ssm_parameter" "razorpay_key_id" {
+  count = var.razorpay_key_id == "" ? 0 : 1
+  name  = "/${var.app_name}/RAZORPAY_KEY_ID"
+  type  = "SecureString"
+  value = var.razorpay_key_id
+  tags  = local.tags
+}
+
+resource "aws_ssm_parameter" "razorpay_key_secret" {
+  count = var.razorpay_key_secret == "" ? 0 : 1
+  name  = "/${var.app_name}/RAZORPAY_KEY_SECRET"
+  type  = "SecureString"
+  value = var.razorpay_key_secret
+  tags  = local.tags
+}
+
+resource "aws_ssm_parameter" "razorpay_webhook_secret" {
+  count = var.razorpay_webhook_secret == "" ? 0 : 1
+  name  = "/${var.app_name}/RAZORPAY_WEBHOOK_SECRET"
+  type  = "SecureString"
+  value = var.razorpay_webhook_secret
   tags  = local.tags
 }
 

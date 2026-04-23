@@ -8,13 +8,17 @@ A single reference for secret rotation, first deploy, incident recovery, and tea
 
 Settings → Secrets and variables → Actions → New repository secret:
 
-| Name                    | Value                                                                                              |
-| ----------------------- | -------------------------------------------------------------------------------------------------- |
-| `AWS_ACCESS_KEY_ID`     | IAM user with admin/power-user for the deployer                                                    |
-| `AWS_SECRET_ACCESS_KEY` | Matching secret                                                                                    |
-| `MONGO_URI`             | `mongodb+srv://<user>:<password>@<cluster>.mongodb.net/resumeright?retryWrites=true&w=majority`    |
-| `ADMIN_KEY`             | Long random string for the bootstrap `/admin/login`                                                |
-| `JWT_SECRET`            | **Must match** `terraform/terraform.tfvars`. Generate with the command below.                      |
+| Name                         | Value                                                                                              |
+| ---------------------------- | -------------------------------------------------------------------------------------------------- |
+| `AWS_ACCESS_KEY_ID`          | IAM user with admin/power-user for the deployer                                                    |
+| `AWS_SECRET_ACCESS_KEY`      | Matching secret                                                                                    |
+| `TF_STATE_BUCKET`            | S3 bucket name holding `resumeright/terraform.tfstate` (must exist + versioned + SSE)              |
+| `MONGO_URI`                  | `mongodb+srv://<user>:<password>@<cluster>.mongodb.net/resumeright?retryWrites=true&w=majority`    |
+| `ADMIN_KEY`                  | Long random string for the bootstrap `/admin/login`                                                |
+| `JWT_SECRET`                 | 48+ byte random. Generate with the command below.                                                  |
+| `RAZORPAY_KEY_ID`            | *(optional)* Razorpay Key ID — `rzp_test_*` or `rzp_live_*`. Leave blank to disable `/payments/*`. |
+| `RAZORPAY_KEY_SECRET`        | *(optional)* Razorpay Key Secret, paired with the Key ID above                                     |
+| `RAZORPAY_WEBHOOK_SECRET`    | *(optional)* Webhook secret, set when you create the webhook in Razorpay Dashboard                 |
 
 Generate a JWT secret:
 
@@ -49,38 +53,50 @@ node -e "console.log(require('crypto').randomBytes(48).toString('base64url'))"
 
 ## 3. Rotating secrets
 
-### 3a. JWT secret (no downtime tolerated — do during low traffic)
+### 3a. JWT secret (invalidates all live sessions)
 
 1. Generate a new value:
    ```bash
    node -e "console.log(require('crypto').randomBytes(48).toString('base64url'))"
    ```
-2. Update in **three** places (they must match):
-   - GitHub secret `JWT_SECRET`
-   - `terraform/terraform.tfvars` → `jwt_secret`
-   - *(optional)* SSM `/resumeright/JWT_SECRET` directly, if you need instant rotation
-3. Push a no-op commit (or `workflow_dispatch` the pipeline) → Actions re-applies Terraform → new SSM value → deploy rewrites `.env` → pm2 reloads.
+2. Update the GitHub secret `JWT_SECRET` (Settings → Secrets and variables → Actions).
+   - If you also keep a local `terraform/terraform.tfvars`, update `jwt_secret` there so hand-runs of terraform stay in sync. It's `.gitignore`d.
+3. Push a no-op commit (or `workflow_dispatch` the pipeline) → Terraform updates SSM → deploy rewrites `.env` → pm2 reloads.
 4. All existing user JWTs are invalidated; users must log in again. That is intentional after a rotation.
 
 ### 3b. MongoDB Atlas password
-
-The current password leaked in commit `10df4cb`. **Rotate now**.
 
 1. Atlas UI → Database Access → edit the `resumeright` user → **Edit Password** → autogenerate.
 2. Compose the new URI:
    ```
    mongodb+srv://resumeright:<NEWPASS>@<cluster>.mongodb.net/resumeright?retryWrites=true&w=majority
    ```
-3. Update in **two** places:
-   - GitHub secret `MONGO_URI`
-   - `terraform/terraform.tfvars` → `mongo_uri`
+3. Update the GitHub secret `MONGO_URI`. (Also update `terraform/terraform.tfvars` locally if you keep one.)
 4. Trigger the pipeline (push or `workflow_dispatch`). Terraform updates SSM; deploy pulls new value; pm2 reloads. Existing connections are recycled on reload.
 
 ### 3c. Admin bootstrap key
 
-Also leaked in `10df4cb`. Rotate by setting a fresh random value in both `ADMIN_KEY` (GitHub) and `admin_key` (tfvars), then re-push.
+Rotate by setting a fresh random value in GitHub secret `ADMIN_KEY`, then re-push. This invalidates any existing admin JWT on its next refresh (12h max).
 
-### 3d. Revoking the leaked secrets from git history (optional but recommended)
+### 3d. Razorpay keys
+
+**When to rotate:** Key Secret leaked in logs/commits, laptop lost, staff offboarded, or scheduled hygiene (every 90 days).
+
+1. Razorpay Dashboard → **Account & Settings → API Keys** → **Regenerate Test/Live Key**.
+   - Razorpay immediately shows the *new* Key ID + Secret. The old pair stops working within minutes, so have the next steps ready.
+2. Update GitHub secrets: `RAZORPAY_KEY_ID`, `RAZORPAY_KEY_SECRET`.
+3. Trigger the pipeline (push or `workflow_dispatch`). Terraform updates SSM → deploy rewrites `.env` → pm2 reloads.
+4. Verify `/` returns `"razorpay":true`. Test a ₹1 order in test mode end-to-end.
+
+**Webhook secret rotation:**
+
+1. Razorpay Dashboard → **Settings → Webhooks** → edit the webhook → **Regenerate secret**.
+2. Copy the new secret, update GitHub `RAZORPAY_WEBHOOK_SECRET`, re-run pipeline.
+3. Any in-flight webhooks signed with the old secret will fail verification for ~1–2 min until pm2 reloads — Razorpay retries automatically.
+
+**If you're just setting them up for the first time** (as opposed to rotating): same flow, but also add a webhook in Razorpay Dashboard pointing at `https://<api-cloudfront>/payments/webhook`, subscribed to **`payment.captured`**. Copy the secret into GitHub before the first test payment.
+
+### 3e. Revoking leaked secrets from git history (if a secret ever landed in a commit)
 
 The values in `10df4cb` are public to anyone who ever had repo access. Rotation above makes them useless, but to also purge the history:
 
@@ -120,20 +136,53 @@ To keep the option of redeploying, do **not** delete:
 
 | Symptom                                                           | Diagnosis                                                                 | Fix                                                                                                   |
 | ----------------------------------------------------------------- | ------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------- |
-| `deploy-backend` fails at "Wait for ASG instance to be healthy"   | Instance never passed EC2 health check (kernel / AMI / userdata broke)    | Check EC2 console → instance → System Log; re-run pipeline                                            |
-| `deploy-backend` fails at "Wait for SSM agent to be online"       | Instance came up but SSM agent not reporting                              | Usually transient; re-run. If persistent, SG outbound blocks or IAM role missing `AmazonSSMManagedInstanceCore` |
-| Health check fails at end of `deploy-backend`                     | pm2 crashed → `.env` issue or mongo unreachable                           | `aws ssm start-session --target <instance>`; `cd /home/ubuntu/app/backend && pm2 logs`                |
-| `terraform-apply` fails on SSM parameter already exists           | You applied once by hand                                                  | `terraform import aws_ssm_parameter.mongo_uri /resumeright/MONGO_URI` etc.                            |
-| Users report "Invalid or expired token" en masse                  | JWT secret was rotated                                                    | Expected for ~7 days after rotation; users re-login                                                   |
-| 403 from CloudFront                                               | S3 object is missing or OAI policy mismatch                               | Check `deploy-frontend` job; `aws s3 ls s3://<bucket>/`                                               |
+| `deploy-backend` fails at "Wait for SSM agent to be online"       | Instance came up but SSM agent not reporting (typically within 2min)      | Usually transient; re-run. If persistent, SG outbound blocks or IAM role missing `AmazonSSMManagedInstanceCore` |
+| `deploy-backend` "SSM deploy failed" with pm2 error in stderr     | `.env` issue, missing dep, or bad MONGO_URI — `pm2 logs` in step output has the real cause | Read the inline `pm2 logs resumeright --lines 80` dump; fix secret or code; re-push                   |
+| `DB connectivity check` fails after `Backend process is healthy`  | App is up but can't reach Mongo → Atlas allowlist is blocking the EIP     | Add the Elastic IP from the `Capture outputs` step to **Atlas → Network Access**. EIP is stable across deploys. |
+| `terraform-apply` fails on "ParameterAlreadyExists"               | SSM param created outside Terraform                                       | `terraform import aws_ssm_parameter.<name> /resumeright/<NAME>`                                       |
+| `/payments/order` returns 503 "Payments not configured"           | `RAZORPAY_KEY_ID` / `RAZORPAY_KEY_SECRET` not in SSM                      | Add both to GitHub secrets, re-deploy. Verify `/` response has `"razorpay":true`.                     |
+| `/payments/webhook` keeps returning 400 "Invalid signature"       | `RAZORPAY_WEBHOOK_SECRET` in SSM doesn't match the one in Razorpay Dashboard | Regenerate in Razorpay Dashboard → Webhooks; copy new secret to GitHub; re-deploy.                   |
+| Users report "Invalid or expired token" en masse                  | JWT secret was rotated                                                    | Expected — users re-login. Normal within 7 days of rotation.                                          |
+| 403 from CloudFront                                               | S3 object missing or public-read bucket policy not applied                | Check `deploy-frontend` job; `aws s3 ls s3://<frontend-bucket>/`; re-push to rebuild                  |
+| Frontend loads but `const API = '__API_URL__'` (unreplaced)       | The "Inject API URL" step failed or the terraform output was empty        | Check `terraform-apply` output `api_url` — if empty, CloudFront distro failed; re-apply               |
 
 ---
 
 ## 6. Quick reference — where things live
 
+- **Infra:** single `t3.micro` EC2 + Elastic IP (no ALB, no ASG). Two CloudFront distros (frontend / API). Two S3 buckets (frontend public, uploads private).
 - **Backend code**: `/home/ubuntu/app/backend/` on the EC2 instance
-- **Logs**: `pm2 logs resumeright` (as `ubuntu` user)
-- **Secrets at rest**: SSM Parameter Store → `/resumeright/{MONGO_URI,ADMIN_KEY,JWT_SECRET}`
-- **Uploaded resumes**: private S3 bucket `resumeright-uploads-<suffix>`; accessed via pre-signed URLs (600s TTL)
-- **Frontend**: public S3 bucket `resumeright-website-<suffix>` fronted by CloudFront
-- **State file**: GitHub Actions artifact `tfstate` (retention 30 days). For longer-term, migrate to an S3 backend.
+- **Logs**: `sudo -u ubuntu pm2 logs resumeright` (shell in via `aws ssm start-session --target <instance-id>`)
+- **Secrets at rest**: SSM Parameter Store → `/resumeright/*`
+  - `MONGO_URI`, `ADMIN_KEY`, `JWT_SECRET` (required)
+  - `RAZORPAY_KEY_ID`, `RAZORPAY_KEY_SECRET`, `RAZORPAY_WEBHOOK_SECRET` (optional — payments gracefully disable if missing)
+- **Uploaded resumes**: private S3 bucket `resumeright-uploads-<suffix>`; accessed via pre-signed URLs (600s TTL, 180-day lifecycle expiry on unprocessed objects)
+- **Frontend**: public S3 bucket `resumeright-website-<suffix>` fronted by CloudFront; `__API_URL__` placeholder in HTML is `sed`-replaced at deploy time with `terraform output api_url`
+- **Terraform state**: S3 backend — bucket `$TF_STATE_BUCKET`, key `resumeright/terraform.tfstate`, encrypted. Every pipeline run reads/writes the same state.
+- **Admin access**: `https://<frontend-cloudfront>/admin.html` → paste `ADMIN_KEY` → backend swaps it for a 12h JWT stored in sessionStorage.
+
+---
+
+## 7. Health checks to run after any deploy
+
+```bash
+# 1. Process is up (no DB)
+curl https://<api-cloudfront>/healthz
+# → {"ok":true}
+
+# 2. DB is reachable + razorpay flag
+curl https://<api-cloudfront>/
+# → {"status":"ResumeRight backend OK","leads":<n>,"users":<n>,"s3":true,"razorpay":true}
+
+# 3. Frontend was injected with the right API URL
+curl -s https://<frontend-cloudfront>/index.html | grep "const API"
+# → should show the api_url, NOT __API_URL__
+
+# 4. Admin login still works
+curl -X POST https://<api-cloudfront>/admin/login \
+  -H "Content-Type: application/json" \
+  -d "{\"key\":\"$ADMIN_KEY\"}"
+# → {"success":true,"token":"eyJ..."}
+```
+
+If any of those fail, jump to **Section 5 — Common failure modes**.

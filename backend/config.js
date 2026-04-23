@@ -37,6 +37,12 @@ const env = {
 
   RATE_LIMIT_WINDOW_MS: parseInt(optional('RATE_LIMIT_WINDOW_MS', '900000'), 10),
   RATE_LIMIT_MAX:       parseInt(optional('RATE_LIMIT_MAX', '100'), 10),
+
+  // Razorpay — optional. If missing, /payments/* endpoints are disabled (503).
+  // Test keys start with `rzp_test_`, live keys with `rzp_live_`.
+  RAZORPAY_KEY_ID:         optional('RAZORPAY_KEY_ID', ''),
+  RAZORPAY_KEY_SECRET:     optional('RAZORPAY_KEY_SECRET', ''),
+  RAZORPAY_WEBHOOK_SECRET: optional('RAZORPAY_WEBHOOK_SECRET', ''),
 };
 
 if (env.JWT_SECRET.length < 32) {
@@ -45,6 +51,10 @@ if (env.JWT_SECRET.length < 32) {
 
 if (env.NODE_ENV === 'production' && env.CORS_ORIGINS.length === 1 && env.CORS_ORIGINS[0] === '*') {
   console.warn('⚠️  CORS_ORIGINS=* in production — set an explicit allowlist.');
+}
+
+if (env.NODE_ENV === 'production' && !env.RAZORPAY_KEY_ID) {
+  console.warn('⚠️  RAZORPAY_KEY_ID not set — /payments/* endpoints will return 503.');
 }
 
 module.exports = env;

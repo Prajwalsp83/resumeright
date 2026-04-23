@@ -151,14 +151,14 @@ tr:hover td{background:rgba(255,255,255,.02);}
       <div class="empty-state" id="emptyState" style="display:none"><p>📭 No leads yet.</p></div>
     </div>
 
-    <!-- USERS -->
+    <!-- USERS (joined with leads by email) -->
     <div class="toolbar">
-      <h2>Registered Users</h2>
+      <h2>Registered Users · Their Resumes</h2>
       <button class="refresh-btn" onclick="loadUsers()">↻ Refresh</button>
     </div>
     <div class="table-wrap">
       <table>
-        <thead><tr><th>#</th><th>Name</th><th>Email</th><th>Registered On</th></tr></thead>
+        <thead><tr><th>#</th><th>Name / Email</th><th>Registered</th><th>Resumes Sent</th><th>Latest Activity</th><th>Action</th></tr></thead>
         <tbody id="usersTable"></tbody>
       </table>
       <div class="empty-state" id="emptyUsers" style="display:none"><p>👤 No users yet.</p></div>
@@ -265,6 +265,8 @@ async function loadLeads(){
     const d = await r.json();
     allLeads = d.leads || [];
     updateStats(); renderTable();
+    // Users table shows "resumes sent" joined by email — keep it fresh too.
+    if (allUsers.length) renderUsers();
   }catch(e){console.error('Leads error:',e);}
 }
 async function loadUsers(){
@@ -343,14 +345,46 @@ function renderUsers(){
   const empty = document.getElementById('emptyUsers');
   if(!allUsers.length){empty.style.display='block';tbody.innerHTML='';return;}
   empty.style.display='none';
-  tbody.innerHTML = allUsers.map((u,i)=>`
-    <tr>
-      <td style="color:var(--muted);font-size:12px">${allUsers.length-i}</td>
-      <td><div class="lead-name">${u.name||'—'}</div></td>
-      <td><div class="lead-sub">${u.email||'—'}</div></td>
-      <td class="date-cell">${fmtDate(u.createdAt)}</td>
-    </tr>
-  `).join('');
+
+  // Group leads by email so we can show "this user sent N resumes" in one row.
+  const leadsByEmail = {};
+  for (const l of allLeads) {
+    const key = (l.email || '').toLowerCase().trim();
+    if (!key) continue;
+    if (!leadsByEmail[key]) leadsByEmail[key] = [];
+    leadsByEmail[key].push(l);
+  }
+
+  tbody.innerHTML = allUsers.map((u,i)=>{
+    const email = (u.email || '').toLowerCase().trim();
+    const leads = (leadsByEmail[email] || [])
+      .slice()
+      .sort((a,b)=> new Date(b.createdAt||0) - new Date(a.createdAt||0));
+    const count = leads.length;
+    const latest = leads[0];
+    const latestLabel = latest
+      ? `${latest.service || latest.originalName || 'Resume'} · ${fmtDate(latest.createdAt)}`
+      : '—';
+    const actionBtn = latest
+      ? `<button class="view-btn" onclick="showDetail('${latest.id}')">View latest →</button>`
+      : `<span style="color:var(--muted);font-size:12px">No submissions yet</span>`;
+    const countBadge = count > 0
+      ? `<span class="svc-badge svc-resume">${count} ${count===1?'resume':'resumes'}</span>`
+      : `<span style="color:var(--muted);font-size:12px">0</span>`;
+    return `
+      <tr>
+        <td style="color:var(--muted);font-size:12px">${allUsers.length-i}</td>
+        <td>
+          <div class="lead-name">${u.name||'—'}</div>
+          <div class="lead-sub">${u.email||'—'}</div>
+        </td>
+        <td class="date-cell">${fmtDate(u.createdAt)}</td>
+        <td>${countBadge}</td>
+        <td style="font-size:13px;color:var(--muted)">${latestLabel}</td>
+        <td>${actionBtn}</td>
+      </tr>
+    `;
+  }).join('');
 }
 
 async function updateStatus(id, status){

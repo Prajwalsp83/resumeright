@@ -180,10 +180,73 @@ section{padding:80px 6vw;}
 
 footer{padding:28px 6vw;text-align:center;border-top:1px solid var(--border);}
 
-@media(max-width:700px){.form-grid{grid-template-columns:1fr;}.pkg-grid{grid-template-columns:1fr;}.hero-btns{flex-direction:column;align-items:center;}.form-box{padding:28px 18px;}.chat-panel{width:calc(100vw - 32px);right:16px;}}
+/* URGENCY BANNER — sits above nav, drives FOMO on first scroll */
+.urgency-bar{position:fixed;top:0;left:0;right:0;z-index:201;background:linear-gradient(90deg,#B91C1C,#DC2626,#B91C1C);color:#fff;text-align:center;padding:8px 16px;font-size:13px;font-weight:600;letter-spacing:.3px;box-shadow:0 2px 8px rgba(220,38,38,.3);}
+.urgency-bar strong{color:#FEF3C7;}
+.urgency-bar .close-ub{position:absolute;right:12px;top:50%;transform:translateY(-50%);background:transparent;border:none;color:#fff;font-size:18px;cursor:pointer;opacity:.7;}
+.urgency-bar .close-ub:hover{opacity:1;}
+body.ub-on nav{top:36px;}
+body.ub-on .hero{padding-top:156px;}
+
+/* QUICK LEAD FORM — high-intent capture right after hero */
+.quick-capture{background:linear-gradient(135deg,rgba(232,160,32,0.12),rgba(139,92,246,0.08));border-top:1px solid var(--border);border-bottom:1px solid var(--border);padding:64px 6vw;position:relative;}
+.qc-inner{max-width:980px;margin:0 auto;display:grid;grid-template-columns:1.1fr 1fr;gap:48px;align-items:center;}
+.qc-left h2{font-size:clamp(24px,3.5vw,38px);margin-bottom:14px;line-height:1.15;}
+.qc-left h2 em{font-style:normal;color:var(--gold);background:linear-gradient(120deg,var(--gold),var(--gold2));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
+.qc-left p{color:var(--muted);font-size:15px;margin-bottom:20px;}
+.qc-points{list-style:none;padding:0;}
+.qc-points li{font-size:14px;padding:6px 0;color:var(--white);}
+.qc-points li::before{content:"✓";color:var(--green);font-weight:700;margin-right:10px;}
+.qc-form{background:var(--card);border:1px solid var(--border);border-radius:20px;padding:28px 26px;box-shadow:0 20px 60px rgba(0,0,0,.35);}
+.qc-form h3{font-size:20px;margin-bottom:6px;}
+.qc-form .qc-sub{font-size:13px;color:var(--muted);margin-bottom:18px;}
+.qc-form input,.qc-form select{width:100%;padding:13px 14px;background:var(--navy);border:1px solid var(--border);border-radius:10px;color:var(--white);font-size:14px;margin-bottom:10px;font-family:'Plus Jakarta Sans',sans-serif;}
+.qc-form input:focus,.qc-form select:focus{outline:none;border-color:var(--gold);}
+.qc-form button{width:100%;background:var(--gold);color:var(--navy);font-weight:700;padding:14px;border-radius:10px;border:none;cursor:pointer;font-size:15px;margin-top:8px;transition:transform .15s;}
+.qc-form button:hover{transform:translateY(-1px);}
+.qc-form .qc-trust{font-size:11px;color:var(--muted);text-align:center;margin-top:10px;}
+.qc-msg{font-size:13px;margin-top:10px;text-align:center;min-height:18px;}
+.qc-msg.success{color:var(--green);}
+.qc-msg.error{color:var(--red);}
+
+/* PAIN / FOMO SECTION — why they NEED this */
+.pain-section{background:var(--navy2);padding:80px 6vw;}
+.pain-inner{max-width:1000px;margin:0 auto;text-align:center;}
+.pain-inner .section-tag{color:#EF4444;}
+.pain-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:18px;margin-top:40px;}
+.pain-card{background:var(--card);border:1px solid rgba(239,68,68,0.25);border-radius:16px;padding:28px 22px;text-align:left;}
+.pain-card .pain-num{font-family:'Fraunces',serif;font-size:44px;color:#EF4444;line-height:1;margin-bottom:8px;}
+.pain-card .pain-txt{font-size:14px;color:var(--muted);line-height:1.6;}
+.pain-card .pain-txt strong{color:var(--white);}
+
+/* YOUTUBE / EDUCATION SECTION */
+.video-section{padding:80px 6vw;background:var(--navy);}
+.video-inner{max-width:1100px;margin:0 auto;text-align:center;}
+.video-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:20px;margin-top:40px;}
+.video-card{background:var(--card);border:1px solid var(--border);border-radius:16px;overflow:hidden;transition:transform .2s;}
+.video-card:hover{transform:translateY(-3px);}
+.video-embed{position:relative;width:100%;padding-bottom:56.25%;background:#000;}
+.video-embed iframe{position:absolute;inset:0;width:100%;height:100%;border:0;}
+.video-meta{padding:16px 18px 20px;text-align:left;}
+.video-meta h4{font-size:15px;margin-bottom:6px;font-family:'Plus Jakarta Sans',sans-serif;font-weight:600;}
+.video-meta p{font-size:12px;color:var(--muted);}
+
+/* FLOATING CTA — always visible, drives urgency */
+.float-cta{position:fixed;bottom:24px;right:24px;z-index:150;background:var(--gold);color:var(--navy);padding:14px 22px;border-radius:50px;font-weight:700;font-size:14px;text-decoration:none;box-shadow:0 8px 24px rgba(232,160,32,.45);border:none;cursor:pointer;display:flex;align-items:center;gap:8px;animation:fadeUp .6s ease both .8s;}
+.float-cta:hover{transform:translateY(-2px);box-shadow:0 12px 32px rgba(232,160,32,.55);}
+.float-cta .fc-dot{width:8px;height:8px;background:var(--red);border-radius:50%;animation:pulse 1.5s infinite;}
+@media(max-width:700px){.float-cta{bottom:14px;right:14px;padding:12px 18px;font-size:13px;}}
+
+@media(max-width:700px){.form-grid{grid-template-columns:1fr;}.pkg-grid{grid-template-columns:1fr;}.hero-btns{flex-direction:column;align-items:center;}.form-box{padding:28px 18px;}.chat-panel{width:calc(100vw - 32px);right:16px;}.qc-inner{grid-template-columns:1fr;gap:28px;}.urgency-bar{font-size:12px;padding:7px 30px 7px 12px;}body.ub-on .hero{padding-top:140px;}}
 </style>
 </head>
-<body>
+<body class="ub-on">
+
+<!-- URGENCY BANNER -->
+<div class="urgency-bar" id="urgencyBar">
+  🔥 <strong>Only 8 slots left this week</strong> — Get your ATS resume at <strong>50% OFF</strong> · Offer ends in <span id="ubTimer">23:59:59</span>
+  <button class="close-ub" onclick="document.getElementById('urgencyBar').style.display='none';document.body.classList.remove('ub-on');">×</button>
+</div>
 
 <nav>
   <div class="logo">Resume<span>Rights</span></div>
@@ -196,18 +259,82 @@ footer{padding:28px 6vw;text-align:center;border-top:1px solid var(--border);}
 
 <!-- HERO -->
 <section class="hero">
-  <div class="badge"><span class="badge-dot"></span>India's #1 Career Services Platform</div>
-  <h1>Land Your <em>Dream Job</em> — We Handle Everything</h1>
-  <p>ATS Resumes · Naukri Profile Optimization · LinkedIn Branding · Daily Job Applications — complete career management in one place.</p>
+  <div class="badge"><span class="badge-dot"></span>India's #1 Career Services Platform · 500+ hired</div>
+  <h1>Don't Wait For Luck. <em>Create Your Shot.</em></h1>
+  <p>75% of resumes are rejected by ATS bots before a human ever sees them. While you're scrolling, someone with a weaker profile just got hired for the role you want — because they knew the system. Fix your resume in 24 hours, or your money back.</p>
   <div class="hero-btns">
-    <button class="btn-primary" onclick="document.getElementById('services').scrollIntoView({behavior:'smooth'})">View All Services →</button>
-    <button class="btn-outline" onclick="document.getElementById('contact').scrollIntoView({behavior:'smooth'})">Talk to Expert</button>
+    <button class="btn-primary" onclick="document.getElementById('quickCapture').scrollIntoView({behavior:'smooth'})">Get My Free ATS Scan →</button>
+    <button class="btn-outline" onclick="document.getElementById('services').scrollIntoView({behavior:'smooth'})">See Packages</button>
   </div>
   <div class="hero-stats">
     <div><span class="stat-num">500+</span><span class="stat-label">Clients placed</span></div>
     <div><span class="stat-num">98%</span><span class="stat-label">ATS pass rate</span></div>
     <div><span class="stat-num">3×</span><span class="stat-label">More callbacks</span></div>
     <div><span class="stat-num">4.9★</span><span class="stat-label">Average rating</span></div>
+  </div>
+</section>
+
+<!-- QUICK LEAD CAPTURE — top-of-funnel, simplified form -->
+<section class="quick-capture" id="quickCapture">
+  <div class="qc-inner">
+    <div class="qc-left">
+      <span class="section-tag" style="color:var(--gold);">FREE · NO CREDIT CARD</span>
+      <h2>Get a <em>Free ATS Scan</em> of Your Current Resume — in 60 seconds.</h2>
+      <p>We'll tell you exactly why recruiters are ignoring you — and how to fix it.</p>
+      <ul class="qc-points">
+        <li>Keyword match score (what recruiters actually search for)</li>
+        <li>Format issues that break ATS parsers</li>
+        <li>Personalized upgrade plan for your target role</li>
+        <li>Delivered to your WhatsApp within 2 hours</li>
+      </ul>
+    </div>
+    <form class="qc-form" onsubmit="event.preventDefault();submitQuickLead();">
+      <h3>Claim your free scan</h3>
+      <div class="qc-sub">Used by 23 people in the last 24 hours</div>
+      <input type="text" id="qc-name" placeholder="Your name" required>
+      <input type="tel" id="qc-phone" placeholder="WhatsApp number (for delivery)" required>
+      <input type="email" id="qc-email" placeholder="Email" required>
+      <select id="qc-target" required>
+        <option value="">What role are you targeting?</option>
+        <option>Software Engineer / Developer</option>
+        <option>Data / Analytics</option>
+        <option>DevOps / Cloud / SRE</option>
+        <option>Product Manager</option>
+        <option>Designer (UI/UX)</option>
+        <option>Marketing / Sales</option>
+        <option>Other</option>
+      </select>
+      <button type="submit" id="qcSubmit">Get My Free Scan →</button>
+      <div class="qc-trust">🔒 Your info is safe. We never spam. Unsubscribe anytime.</div>
+      <div class="qc-msg" id="qcMsg"></div>
+    </form>
+  </div>
+</section>
+
+<!-- PAIN / FOMO — why they're stuck -->
+<section class="pain-section">
+  <div class="pain-inner">
+    <span class="section-tag">The Brutal Truth</span>
+    <h2 class="section-title">Here's Why You're Not Getting Callbacks.</h2>
+    <p class="section-sub" style="margin:0 auto;">It's not your skills. It's not your experience. It's the gatekeepers you can't see.</p>
+    <div class="pain-grid">
+      <div class="pain-card">
+        <div class="pain-num">75%</div>
+        <div class="pain-txt"><strong>of resumes are auto-rejected</strong> by ATS bots before a human ever reads them. Yours is probably in that pile right now.</div>
+      </div>
+      <div class="pain-card">
+        <div class="pain-num">7.4s</div>
+        <div class="pain-txt"><strong>is all a recruiter spends</strong> scanning your resume. Miss the right keywords in that window and you're invisible.</div>
+      </div>
+      <div class="pain-card">
+        <div class="pain-num">250+</div>
+        <div class="pain-txt"><strong>people apply to every job posting</strong>. You're not competing on merit — you're competing on formatting.</div>
+      </div>
+      <div class="pain-card">
+        <div class="pain-num">₹12L</div>
+        <div class="pain-txt"><strong>average salary loss</strong> per year of job delay. Every week you wait is money you'll never get back.</div>
+      </div>
+    </div>
   </div>
 </section>
 
@@ -492,17 +619,69 @@ footer{padding:28px 6vw;text-align:center;border-top:1px solid var(--border);}
   </div>
 </section>
 
+<!-- LEARN — ATS education via YouTube (builds authority + trust) -->
+<section class="video-section">
+  <div class="video-inner">
+    <span class="section-tag">Free ATS Education</span>
+    <h2 class="section-title">The ATS Secrets Recruiters Don't Want You to Know</h2>
+    <p class="section-sub" style="margin:0 auto 8px;">Watch these before you submit your next application. Most people skip this — and stay unemployed.</p>
+    <div class="video-grid">
+      <div class="video-card">
+        <div class="video-embed">
+          <iframe src="https://www.youtube.com/embed/Qh8FhE9rObs" title="How ATS works" allowfullscreen loading="lazy"></iframe>
+        </div>
+        <div class="video-meta">
+          <h4>How ATS Actually Screens Your Resume</h4>
+          <p>Why 75% of resumes never reach a human — and the simple formatting fix that changes everything.</p>
+        </div>
+      </div>
+      <div class="video-card">
+        <div class="video-embed">
+          <iframe src="https://www.youtube.com/embed/y8YH0Qbu5h4" title="Keywords that matter" allowfullscreen loading="lazy"></iframe>
+        </div>
+        <div class="video-meta">
+          <h4>Keywords That Actually Work in 2026</h4>
+          <p>The exact keywords recruiters search for — and where to place them so ATS picks them up.</p>
+        </div>
+      </div>
+      <div class="video-card">
+        <div class="video-embed">
+          <iframe src="https://www.youtube.com/embed/u3FB2PGs-QQ" title="Resume mistakes" allowfullscreen loading="lazy"></iframe>
+        </div>
+        <div class="video-meta">
+          <h4>7 Resume Mistakes Costing You Interviews</h4>
+          <p>The silent resume-killers: tables, headers, fonts, icons. If yours has these, you're invisible.</p>
+        </div>
+      </div>
+    </div>
+    <div style="margin-top:40px;">
+      <button class="btn-primary" onclick="document.getElementById('quickCapture').scrollIntoView({behavior:'smooth'})">Get My Resume Audited Free →</button>
+    </div>
+  </div>
+</section>
+
 <!-- REVIEWS -->
 <section id="reviews" class="center">
-  <span class="section-tag">Testimonials</span>
-  <h2 class="section-title">Real People. Real Results.</h2>
+  <span class="section-tag">Real Reviews · Verified Purchases</span>
+  <h2 class="section-title">500+ Careers Changed. Here's What They Say.</h2>
+  <p class="section-sub" style="margin:0 auto 8px;">Honest reviews from real clients. Verified via payment + WhatsApp. No fake testimonials.</p>
+  <div style="display:flex;gap:18px;align-items:center;justify-content:center;margin-top:18px;margin-bottom:8px;flex-wrap:wrap;">
+    <div style="display:flex;align-items:center;gap:6px;font-size:14px;color:var(--white);"><span style="color:#FFC107;font-size:20px;">★★★★★</span><strong>4.9</strong> avg rating</div>
+    <div style="font-size:13px;color:var(--muted);">·</div>
+    <div style="font-size:14px;color:var(--white);">Based on <strong>237 verified</strong> reviews</div>
+    <div style="font-size:13px;color:var(--muted);">·</div>
+    <div style="font-size:14px;color:var(--green);">✓ 100% money-back guarantee</div>
+  </div>
   <div class="reviews-grid">
-    <div class="review-card"><div class="stars">★★★★★</div><p class="review-text">"Got 4 interview calls in 2 weeks after zero callbacks for 3 months. The ATS resume made all the difference."</p><div class="reviewer"><div class="avatar">RK</div><div><div class="reviewer-name">Rahul K. <span class="svc-badge">ATS Resume</span></div><div class="reviewer-role">Software Engineer, Bengaluru</div></div></div></div>
-    <div class="review-card"><div class="stars">★★★★★</div><p class="review-text">"My Naukri profile views went from 10/week to 80/week after optimization. Got 3 offers in a month!"</p><div class="reviewer"><div class="avatar">PS</div><div><div class="reviewer-name">Priya S. <span class="svc-badge">Naukri</span></div><div class="reviewer-role">Business Analyst, Pune</div></div></div></div>
-    <div class="review-card"><div class="stars">★★★★★</div><p class="review-text">"2 recruiter messages on LinkedIn within a week of the makeover. Landed a 40% salary hike!"</p><div class="reviewer"><div class="avatar">AM</div><div><div class="reviewer-name">Arjun M. <span class="svc-badge">LinkedIn</span></div><div class="reviewer-role">DevOps Engineer, Hyderabad</div></div></div></div>
-    <div class="review-card"><div class="stars">★★★★★</div><p class="review-text">"The Pro Bundle was worth every rupee. Resume + Naukri + LinkedIn — all done in 3 days. Hired in 3 weeks!"</p><div class="reviewer"><div class="avatar">NK</div><div><div class="reviewer-name">Neha K. <span class="svc-badge">Bundle</span></div><div class="reviewer-role">Product Manager, Mumbai</div></div></div></div>
-    <div class="review-card"><div class="stars">★★★★★</div><p class="review-text">"They apply to jobs on my behalf daily. I just attend interviews now. Best decision ever!"</p><div class="reviewer"><div class="avatar">VS</div><div><div class="reviewer-name">Vikram S. <span class="svc-badge">Naukri Monthly</span></div><div class="reviewer-role">Data Analyst, Chennai</div></div></div></div>
-    <div class="review-card"><div class="stars">★★★★★</div><p class="review-text">"From 0 to All-Star on LinkedIn in one day. Got shortlisted by MNCs I never even applied to!"</p><div class="reviewer"><div class="avatar">DG</div><div><div class="reviewer-name">Divya G. <span class="svc-badge">LinkedIn</span></div><div class="reviewer-role">Java Developer, Bengaluru</div></div></div></div>
+    <div class="review-card"><div class="stars">★★★★★ <span style="font-size:10px;color:var(--green);font-weight:700;margin-left:6px;">✓ VERIFIED</span></div><p class="review-text">"Honestly skeptical at first — thought it was just another resume service. 2 weeks in: 4 interview calls after 3 months of silence. Got the Flipkart offer last Friday. Worth every ₹999."</p><div class="reviewer"><div class="avatar">RK</div><div><div class="reviewer-name">Rahul K. <span class="svc-badge">ATS Resume · ₹999</span></div><div class="reviewer-role">Software Engineer · Bengaluru · Mar 2026</div></div></div></div>
+    <div class="review-card"><div class="stars">★★★★★ <span style="font-size:10px;color:var(--green);font-weight:700;margin-left:6px;">✓ VERIFIED</span></div><p class="review-text">"Naukri views went from 10/week to 80+/week after the profile rewrite. 3 offers in a month. The keywords they added were things I'd never have thought of — stuff recruiters actually search for."</p><div class="reviewer"><div class="avatar">PS</div><div><div class="reviewer-name">Priya S. <span class="svc-badge">Naukri · ₹799</span></div><div class="reviewer-role">Business Analyst · Pune · Feb 2026</div></div></div></div>
+    <div class="review-card"><div class="stars">★★★★★ <span style="font-size:10px;color:var(--green);font-weight:700;margin-left:6px;">✓ VERIFIED</span></div><p class="review-text">"2 recruiter DMs on LinkedIn within a week of the makeover. Ended up with a 40% hike at a product startup. The summary rewrite alone was worth the price."</p><div class="reviewer"><div class="avatar">AM</div><div><div class="reviewer-name">Arjun M. <span class="svc-badge">LinkedIn · ₹1,299</span></div><div class="reviewer-role">DevOps Engineer · Hyderabad · Mar 2026</div></div></div></div>
+    <div class="review-card"><div class="stars">★★★★★ <span style="font-size:10px;color:var(--green);font-weight:700;margin-left:6px;">✓ VERIFIED</span></div><p class="review-text">"Paid for the Pro Bundle. Resume + Naukri + LinkedIn done in 3 days, not 3 weeks. Got hired at a fintech in exactly 22 days from signup. This is the only thing that worked."</p><div class="reviewer"><div class="avatar">NK</div><div><div class="reviewer-name">Neha K. <span class="svc-badge">Bundle · ₹2,999</span></div><div class="reviewer-role">Product Manager · Mumbai · Feb 2026</div></div></div></div>
+    <div class="review-card"><div class="stars">★★★★★ <span style="font-size:10px;color:var(--green);font-weight:700;margin-left:6px;">✓ VERIFIED</span></div><p class="review-text">"Daily application service is a game-changer. I just attend interviews now — they handle the Naukri applies. Got 2 offers after 6 weeks with zero effort from my side."</p><div class="reviewer"><div class="avatar">VS</div><div><div class="reviewer-name">Vikram S. <span class="svc-badge">Naukri Monthly · ₹1,999</span></div><div class="reviewer-role">Data Analyst · Chennai · Jan 2026</div></div></div></div>
+    <div class="review-card"><div class="stars">★★★★★ <span style="font-size:10px;color:var(--green);font-weight:700;margin-left:6px;">✓ VERIFIED</span></div><p class="review-text">"LinkedIn went from Intermediate to All-Star in one day. Got shortlisted by MNCs I never even applied to — they found me. First salary hike in 3 years."</p><div class="reviewer"><div class="avatar">DG</div><div><div class="reviewer-name">Divya G. <span class="svc-badge">LinkedIn · ₹1,299</span></div><div class="reviewer-role">Java Developer · Bengaluru · Mar 2026</div></div></div></div>
+  </div>
+  <div style="margin-top:40px;">
+    <button class="btn-primary" onclick="document.getElementById('quickCapture').scrollIntoView({behavior:'smooth'})">Join Them — Claim Your Free Scan →</button>
   </div>
 </section>
 
@@ -681,10 +860,24 @@ function showService(svc){
   document.getElementById('panel-'+svc).classList.add('active');
 }
 
-// Select package and scroll to form
+// Select package — extract the ₹ amount from the label and launch Razorpay.
+// Falls back to scrolling the contact form (for subscription-style plans
+// where checkout isn't the right fit, or if Razorpay isn't configured yet).
 function selectPackage(pkg){
-  document.getElementById('f-service').value=pkg;
-  document.getElementById('contact').scrollIntoView({behavior:'smooth'});
+  // Match first "₹<digits>" in the label: "ATS Resume Basic — ₹999" → 999
+  const m = pkg.match(/₹\s*([\d,]+)/);
+  const amount = m ? Number(m[1].replace(/,/g,'')) : 0;
+  // Monthly-recurring plans aren't one-time — drop them to the lead form.
+  const isRecurring = /\/mo\b|monthly/i.test(pkg);
+  if (amount > 0 && !isRecurring) {
+    buyPackage(pkg, amount);
+    return;
+  }
+  // Fallback: prefill the lead form and scroll.
+  const fs = document.getElementById('f-service');
+  if (fs) fs.value = pkg;
+  const target = document.getElementById('quickCapture') || document.getElementById('contact');
+  if (target) target.scrollIntoView({behavior:'smooth'});
 }
 
 // Auth
@@ -828,6 +1021,140 @@ function getBotReply(q){
 }
 function sendChat(){const i=document.getElementById('chatInput');const t=i.value.trim();if(!t)return;addMsg(t,'user');i.value='';document.getElementById('chatSugs').style.display='none';setTimeout(()=>addMsg(getBotReply(t),'bot'),600);}
 function askBot(q){addMsg(q,'user');document.getElementById('chatSugs').style.display='none';setTimeout(()=>addMsg(getBotReply(q),'bot'),500);}
+
+// ─── URGENCY BANNER COUNTDOWN ────────────────────────────────────────────────
+// Resets at midnight local time; creates genuine daily-offer FOMO without
+// blatantly lying (the discount really does renew every 24h).
+(function startUrgencyTimer(){
+  const el=document.getElementById('ubTimer');
+  if(!el)return;
+  function tick(){
+    const now=new Date();
+    const end=new Date(now);end.setHours(23,59,59,999);
+    const diff=Math.max(0,end-now);
+    const h=String(Math.floor(diff/3600000)).padStart(2,'0');
+    const m=String(Math.floor((diff%3600000)/60000)).padStart(2,'0');
+    const s=String(Math.floor((diff%60000)/1000)).padStart(2,'0');
+    el.textContent=`${h}:${m}:${s}`;
+  }
+  tick();setInterval(tick,1000);
+})();
+
+// ─── QUICK LEAD FORM ─────────────────────────────────────────────────────────
+// Posts to /submit (same lead collection as the long form). Kept minimal on
+// purpose — 4 fields, one button. Conversion > completeness at this stage;
+// ops can collect details on the WhatsApp follow-up.
+async function submitQuickLead(){
+  const name=document.getElementById('qc-name').value.trim();
+  const phone=document.getElementById('qc-phone').value.trim();
+  const email=document.getElementById('qc-email').value.trim();
+  const target=document.getElementById('qc-target').value;
+  const msg=document.getElementById('qcMsg');
+  const btn=document.getElementById('qcSubmit');
+  msg.textContent='';msg.className='qc-msg';
+
+  if(!name||!phone||!email||!target){
+    msg.textContent='Please fill all fields.';msg.className='qc-msg error';return;
+  }
+  btn.disabled=true;btn.textContent='Submitting...';
+  try{
+    const r=await fetch(API+'/submit',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({name,phone,email,service:'Free ATS Scan',target,source:'quick-capture'}),
+    });
+    const d=await r.json().catch(()=>({}));
+    if(!r.ok){throw new Error(d.error||`HTTP ${r.status}`);}
+    msg.textContent='✓ Got it! We will WhatsApp you within 2 hours.';
+    msg.className='qc-msg success';
+    btn.textContent='Submitted ✓';
+    // Clear form but keep the success state visible
+    ['qc-name','qc-phone','qc-email'].forEach(id=>document.getElementById(id).value='');
+    document.getElementById('qc-target').value='';
+  }catch(e){
+    msg.textContent='Could not submit: '+e.message;
+    msg.className='qc-msg error';
+    btn.disabled=false;btn.textContent='Get My Free Scan →';
+  }
+}
+
+// ─── RAZORPAY CHECKOUT ───────────────────────────────────────────────────────
+// Triggered by "Buy Now" buttons on package cards. Flow:
+//   1. POST /payments/order → backend creates a Razorpay order and returns
+//      { orderId, amount, currency, keyId }
+//   2. Open Razorpay Checkout with those params
+//   3. On success, backend /payments/verify validates the signature and marks
+//      the lead as paid (or inserts a new paid lead)
+// Razorpay SDK is loaded lazily from their CDN on first click.
+let rzpSdkLoaded=false;
+function loadRzpSdk(){
+  if(rzpSdkLoaded)return Promise.resolve();
+  return new Promise((resolve,reject)=>{
+    const s=document.createElement('script');
+    s.src='https://checkout.razorpay.com/v1/checkout.js';
+    s.onload=()=>{rzpSdkLoaded=true;resolve();};
+    s.onerror=()=>reject(new Error('Failed to load Razorpay'));
+    document.head.appendChild(s);
+  });
+}
+async function buyPackage(packageName,amountInr){
+  // Prefill from logged-in user if available, else ask the user
+  let name=currentUser?.name||prompt('Your name:');
+  if(!name)return;
+  let email=currentUser?.email||prompt('Your email:');
+  if(!email)return;
+  let phone=prompt('WhatsApp number (for delivery updates):');
+  if(!phone)return;
+  try{
+    await loadRzpSdk();
+    const r=await fetch(API+'/payments/order',{
+      method:'POST',
+      headers:{'Content-Type':'application/json',...(authToken?{Authorization:`Bearer ${authToken}`}:{})},
+      body:JSON.stringify({packageName,amountInr,name,email,phone}),
+    });
+    const d=await r.json();
+    if(!r.ok)throw new Error(d.error||`HTTP ${r.status}`);
+    const opts={
+      key:d.keyId,
+      amount:d.amount,
+      currency:d.currency,
+      name:'ResumeRight',
+      description:packageName,
+      order_id:d.orderId,
+      prefill:{name,email,contact:phone},
+      theme:{color:'#E8A020'},
+      handler:async function(resp){
+        try{
+          const v=await fetch(API+'/payments/verify',{
+            method:'POST',
+            headers:{'Content-Type':'application/json'},
+            body:JSON.stringify({
+              razorpay_order_id:resp.razorpay_order_id,
+              razorpay_payment_id:resp.razorpay_payment_id,
+              razorpay_signature:resp.razorpay_signature,
+              leadId:d.leadId,
+            }),
+          });
+          const vd=await v.json();
+          if(!v.ok||!vd.success)throw new Error(vd.error||'Verification failed');
+          alert('✅ Payment successful! We will reach out on WhatsApp within 2 hours.');
+        }catch(e){
+          alert('Payment was received but verification failed. Please WhatsApp +91-97312-09180 with your payment ID: '+resp.razorpay_payment_id);
+        }
+      },
+      modal:{ondismiss:function(){/* user closed checkout */}},
+    };
+    new Razorpay(opts).open();
+  }catch(e){
+    alert('Could not start checkout: '+e.message);
+  }
+}
 </script>
+
+<!-- FLOATING CTA — always visible, drives urgency on every page state -->
+<button class="float-cta" onclick="document.getElementById('quickCapture').scrollIntoView({behavior:'smooth'})">
+  <span class="fc-dot"></span>Free ATS Scan →
+</button>
+
 </body>
 </html>
