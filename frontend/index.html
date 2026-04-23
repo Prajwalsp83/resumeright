@@ -636,7 +636,9 @@ footer{padding:28px 6vw;text-align:center;border-top:1px solid var(--border);}
 </div>
 
 <script>
-const API = 'https://d2jekem22n0os8.cloudfront.net';
+// __API_URL__ is replaced at deploy time by the pipeline with terraform's api_url output.
+// For local dev, overwrite it manually or run a local backend at http://localhost:5000.
+const API = '__API_URL__';
 let currentUser = JSON.parse(localStorage.getItem('rr_user')||'null');
 
 function updateNav(){

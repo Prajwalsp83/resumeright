@@ -411,6 +411,31 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region:            ${{ env.AWS_REGION }}
 
+      - name: Inject API URL into frontend
+        working-directory: frontend
+        env:
+          API_URL: ${{ needs.terraform-apply.outputs.api_url }}
+        run: |
+          # Single source of truth: terraform's api_url output. We sed-replace
+          # the __API_URL__ placeholder in the HTML files right before upload,
+          # so the committed source never has a hardcoded CloudFront domain.
+          # If CloudFront gets recreated, the next deploy auto-heals.
+          if [ -z "$API_URL" ]; then
+            echo "::error::api_url output is empty — aborting frontend deploy"
+            exit 1
+          fi
+          echo "Injecting API_URL=$API_URL into HTML files"
+          # -i'' works on both GNU sed (Ubuntu) and BSD sed; using | as delimiter
+          # avoids escaping slashes in the URL.
+          sed -i "s|__API_URL__|$API_URL|g" index.html admin.html
+          # Fail loud if any placeholder remains
+          if grep -l '__API_URL__' index.html admin.html 2>/dev/null; then
+            echo "::error::__API_URL__ placeholder still present after sed"
+            exit 1
+          fi
+          echo "Verification: API const in index.html:"
+          grep -n "const API" index.html || true
+
       - name: Upload frontend to S3
         working-directory: frontend
         run: |
