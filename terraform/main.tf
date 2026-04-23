@@ -147,7 +147,7 @@ resource "aws_security_group" "ec2" {
   }
 
   ingress {
-    description = "SSH (optional — prefer SSM Session Manager)"
+    description = "SSH (optional - prefer SSM Session Manager)"
     from_port   = 22
     to_port     = 22
     protocol    = "tcp"
