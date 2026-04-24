@@ -56,6 +56,11 @@ body{background:var(--navy);color:var(--white);font-family:'Plus Jakarta Sans',s
 .filter-sel{background:rgba(255,255,255,.05);border:1px solid var(--border);border-radius:10px;padding:8px 11px;color:var(--white);font-family:'Plus Jakarta Sans',sans-serif;font-size:13px;outline:none;cursor:pointer;}
 .filter-sel option{background:var(--navy2);}
 .refresh-btn{background:rgba(232,160,32,.1);border:1px solid var(--border);color:var(--gold);font-size:13px;padding:8px 16px;border-radius:10px;cursor:pointer;font-family:'Plus Jakarta Sans',sans-serif;font-weight:600;}
+.export-btn{background:rgba(34,197,94,.1);border:1px solid rgba(34,197,94,.3);color:var(--green);font-size:13px;padding:8px 16px;border-radius:10px;cursor:pointer;font-family:'Plus Jakarta Sans',sans-serif;font-weight:600;}
+.export-btn:hover{background:rgba(34,197,94,.18);}
+.export-btn.primary{background:var(--green);color:#0B1628;border-color:var(--green);}
+.export-btn.primary:hover{background:#16a34a;}
+.export-btn:disabled{opacity:.4;cursor:not-allowed;}
 
 /* TABLE */
 .table-wrap{background:var(--card);border:1px solid var(--border);border-radius:14px;overflow:hidden;margin-bottom:28px;}
@@ -90,8 +95,14 @@ tr:hover td{background:rgba(255,255,255,.02);}
 .dval{font-size:13px;color:var(--white);word-break:break-all;}
 .dval a{color:var(--gold);text-decoration:none;display:inline-flex;align-items:center;gap:5px;}
 .dval a:hover{text-decoration:underline;}
-.modal-actions{display:flex;flex-direction:column;gap:8px;margin-top:20px;}
-.wa-btn{display:flex;align-items:center;justify-content:center;gap:8px;background:#25D366;color:#fff;font-weight:700;font-size:14px;padding:12px;border-radius:10px;border:none;cursor:pointer;text-decoration:none;font-family:'Plus Jakarta Sans',sans-serif;}
+.modal-actions{display:flex;flex-direction:column;gap:10px;margin-top:20px;}
+.wa-label{font-size:11px;font-weight:700;color:var(--muted);letter-spacing:.8px;text-transform:uppercase;margin-top:4px;}
+.wa-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+.wa-tpl{display:flex;align-items:center;justify-content:center;gap:6px;background:rgba(37,211,102,.1);border:1px solid rgba(37,211,102,.35);color:#4ade80;font-weight:600;font-size:12px;padding:10px 8px;border-radius:10px;text-decoration:none;font-family:'Plus Jakarta Sans',sans-serif;text-align:center;line-height:1.2;transition:background .15s;}
+.wa-tpl:hover{background:rgba(37,211,102,.22);color:#86efac;}
+.wa-tpl.primary{background:#25D366;color:#0B1628;border-color:#25D366;}
+.wa-tpl.primary:hover{background:#22c55e;color:#0B1628;}
+.wa-tpl.disabled{opacity:.4;pointer-events:none;}
 .close-btn{background:rgba(255,255,255,.06);border:1px solid var(--border);color:var(--muted);font-size:14px;padding:11px;border-radius:10px;cursor:pointer;font-family:'Plus Jakarta Sans',sans-serif;}
 .close-btn:hover{background:rgba(255,255,255,.1);}
 
@@ -139,9 +150,11 @@ tr:hover td{background:rgba(255,255,255,.02);}
       <input class="search-input" type="text" id="searchInput" placeholder="Search name, email, phone..." oninput="renderTable()"/>
       <select class="filter-sel" id="filterStatus" onchange="renderTable()">
         <option value="">All Status</option>
-        <option>New</option><option>In Progress</option><option>Completed</option><option>Paid</option>
+        <option>New</option><option>Pending Payment</option><option>In Progress</option><option>Completed</option><option>Paid</option>
       </select>
       <button class="refresh-btn" onclick="loadLeads()">↻ Refresh</button>
+      <button class="export-btn" onclick="exportCSV('filtered')" title="Export the rows matching your current search + status filter">↓ Export CSV</button>
+      <button class="export-btn primary" onclick="exportCSV('paid')" title="Export all Paid leads — your fulfillment queue">↓ Fulfillment Queue</button>
     </div>
     <div class="table-wrap">
       <table>
@@ -181,10 +194,14 @@ tr:hover td{background:rgba(255,255,255,.02);}
     <div class="drow"><div class="dlabel">Status</div><div class="dval" id="dm-status">—</div></div>
     <div class="drow"><div class="dlabel">Submitted</div><div class="dval" id="dm-date">—</div></div>
     <div class="modal-actions">
-      <a id="dm-wa" href="#" class="wa-btn" target="_blank">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
-        WhatsApp this lead
-      </a>
+      <div class="wa-label">WhatsApp templates</div>
+      <div class="wa-grid">
+        <a id="dm-wa-intro"    href="#" class="wa-tpl"         target="_blank" rel="noopener">💬 First contact</a>
+        <a id="dm-wa-recover"  href="#" class="wa-tpl"         target="_blank" rel="noopener">🔁 Abandoned payment</a>
+        <a id="dm-wa-onboard"  href="#" class="wa-tpl primary" target="_blank" rel="noopener">🎉 Payment received</a>
+        <a id="dm-wa-deliver"  href="#" class="wa-tpl"         target="_blank" rel="noopener">📄 Deliver resume</a>
+        <a id="dm-wa-review"   href="#" class="wa-tpl"         target="_blank" rel="noopener" style="grid-column:span 2">⭐ Ask for review + referral</a>
+      </div>
       <button class="close-btn" onclick="closeModal()">Close</button>
     </div>
   </div>
@@ -387,6 +404,79 @@ function renderUsers(){
   }).join('');
 }
 
+// ─── CSV EXPORT ────────────────────────────────────────────────────────────
+// `mode` = 'filtered' → whatever's currently visible (search + status filter)
+//        = 'paid'     → shortcut: all Paid leads, regardless of UI filter
+// All quoting is RFC 4180: wrap any cell containing ", newline, or quote in
+// double-quotes, and escape inner quotes by doubling them.
+function csvEscape(v){
+  if (v === null || v === undefined) return '';
+  const s = String(v);
+  return /[",\r\n]/.test(s) ? `"${s.replace(/"/g,'""')}"` : s;
+}
+function csvDate(d){
+  if (!d) return '';
+  try { return new Date(d).toLocaleString('en-IN',{timeZone:'Asia/Kolkata',day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'}); }
+  catch(e){ return String(d); }
+}
+
+function exportCSV(mode){
+  let rows;
+  if (mode === 'paid') {
+    rows = allLeads.filter(l => l.status === 'Paid');
+  } else {
+    // Same filter logic as renderTable()
+    const search  = document.getElementById('searchInput').value.toLowerCase();
+    const fStatus = document.getElementById('filterStatus').value;
+    rows = allLeads.filter(l => {
+      const ms = !search || (l.name||'').toLowerCase().includes(search) || (l.email||'').toLowerCase().includes(search) || (l.phone||'').toLowerCase().includes(search);
+      const mf = !fStatus || l.status === fStatus;
+      return ms && mf;
+    });
+  }
+  if (!rows.length) { alert(mode === 'paid' ? 'No Paid leads yet.' : 'No rows match the current filter.'); return; }
+
+  // Most-recent first so the fulfillment CSV opens with today's orders on top.
+  rows.sort((a,b) => new Date(b.paidAt || b.createdAt || 0) - new Date(a.paidAt || a.createdAt || 0));
+
+  const headers = [
+    'Submitted (IST)','Paid At (IST)','Name','Email','Phone','Service','Amount (₹)',
+    'Status','Payment Method','Razorpay Payment ID','Razorpay Order ID',
+    'Experience','Current Role','Target Role','Message','Lead ID',
+  ];
+  const lines = [headers.map(csvEscape).join(',')];
+  for (const l of rows) {
+    lines.push([
+      csvDate(l.createdAt),
+      csvDate(l.paidAt),
+      csvEscape(l.name || ''),
+      csvEscape(l.email || ''),
+      csvEscape(l.phone || ''),
+      csvEscape(l.service || l.pkg || l.originalName || ''),
+      csvEscape(l.paidAmount ?? l.amount ?? ''),
+      csvEscape(l.status || ''),
+      csvEscape(l.paymentMethod || ''),
+      csvEscape(l.razorpayPaymentId || ''),
+      csvEscape(l.razorpayOrderId || ''),
+      csvEscape(l.exp || ''),
+      csvEscape(l.current || ''),
+      csvEscape(l.target || ''),
+      csvEscape((l.message || '').slice(0, 500)),
+      csvEscape(l.id || ''),
+    ].join(','));
+  }
+
+  // BOM (\ufeff) so Excel opens Unicode (₹, accents) correctly on Windows.
+  const blob = new Blob(['\ufeff' + lines.join('\r\n')], { type: 'text/csv;charset=utf-8;' });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  const ts   = new Date().toISOString().slice(0,10);
+  a.href     = url;
+  a.download = `resumeright-${mode === 'paid' ? 'fulfillment' : 'leads'}-${ts}.csv`;
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  setTimeout(()=>URL.revokeObjectURL(url), 1000);
+}
+
 async function updateStatus(id, status){
   try{
     await apiFetch(`/admin/leads/${id}`,{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({status})});
@@ -432,13 +522,137 @@ async function showDetail(id){
     resumeDiv.textContent = '—';
   }
 
-  // WhatsApp link
-  const phone = (l.phone||'').replace(/\D/g,'');
-  const svc = l.service || l.pkg || 'career services';
-  const msg = encodeURIComponent(`Hi ${l.name||''}! 👋 I'm from ResumeRight. You enquired about ${svc}. I'd love to help you get more interviews! When can we connect?`);
-  document.getElementById('dm-wa').href = phone ? `https://wa.me/91${phone}?text=${msg}` : `https://wa.me/919731209180`;
+  // WhatsApp templates — stage-appropriate messages, personalised from lead data.
+  setWhatsAppTemplates(l);
 
   document.getElementById('detailModal').classList.add('open');
+}
+
+// ─── WHATSAPP TEMPLATES ────────────────────────────────────────────────────
+// Each template is a function (lead) → string. Keep them warm but tight;
+// these get sent at real speed so admin can't tweak each word on every lead.
+// The `{var}` placeholders in the outer definitions are replaced inline.
+const WA_FALLBACK_PHONE = '919731209180';
+const WA_REVIEW_URL     = 'https://g.page/r/resumeright/review'; // TODO: replace with real Google review short link once the Business Profile is live
+const WA_REFERRAL_CODE  = 'FRIEND15';
+
+function firstName(n){ return (n||'').trim().split(/\s+/)[0] || 'there'; }
+function pkgShort(svc){
+  if (!svc) return 'your package';
+  // Strip "— ₹999" tails so the message reads naturally.
+  return svc.replace(/\s*[—-]\s*₹.*/,'').trim() || 'your package';
+}
+function amountFor(l){
+  const n = Number(l.paidAmount ?? l.amount);
+  return Number.isFinite(n) && n > 0 ? `₹${n.toLocaleString('en-IN')}` : '';
+}
+function targetLine(l){
+  const t = (l.target || '').trim();
+  return t ? ` targeting ${t}` : '';
+}
+
+const WA_TEMPLATES = {
+  intro: l => (
+`Hi ${firstName(l.name)}! 👋 This is Praj from ResumeRight.
+
+Thanks for checking out ${pkgShort(l.service || l.pkg)}. Quick question — are you actively job-hunting in the next 30 days, or exploring options?
+
+Either way, happy to help. Let me know a good 10 min on WhatsApp or call to walk you through what's included.`
+  ),
+
+  recover: l => {
+    const amt = amountFor(l);
+    return (
+`Hi ${firstName(l.name)}! 👋
+
+I saw you were checking out ${pkgShort(l.service || l.pkg)}${amt ? ' ('+amt+')' : ''} but the payment didn't go through.
+
+Razorpay sometimes times out on UPI — if that happened, I can send you a direct payment link (UPI / card / netbanking all work).
+
+Or if you had questions about what's included, happy to clear them. We turn around v1 of your resume in 48h.`
+    );
+  },
+
+  onboard: l => {
+    const amt = amountFor(l);
+    return (
+`Hi ${firstName(l.name)}! 🎉
+
+Payment${amt ? ' of '+amt : ''} received for ${pkgShort(l.service || l.pkg)}. Thank you!
+
+To get started, please share:
+1) Your current resume (PDF or DOCX)
+2) 2–3 target job roles or JDs you're applying for
+3) Your LinkedIn profile URL
+4) Your current / most-recent CTC (for salary positioning)
+
+You'll have v1 of your ATS-optimised resume within 48 hours.`
+    );
+  },
+
+  deliver: l => (
+`Hi ${firstName(l.name)}! 📄
+
+Here's v1 of your ATS-optimised resume${targetLine(l)}.
+
+What I changed:
+• Rewrote the summary around the roles you're targeting
+• Quantified 6+ bullets with metrics and impact
+• Added ATS keywords from the JDs you shared
+• Clean ${(l.exp||'').match(/\b(sen|10\+|lead)/i) ? '2-page' : '1-page'} format that parses cleanly in Naukri / LinkedIn
+
+Review it when you get a moment. Any edits, reply here — turnaround in 12h.`
+  ),
+
+  review: l => (
+`Hi ${firstName(l.name)}! ⭐
+
+Hope the new resume is landing interviews! Two quick asks:
+
+1) If it helped, a 1-line Google review means the world:
+   ${WA_REVIEW_URL}
+
+2) Any friend you refer gets 15% off with code *${WA_REFERRAL_CODE}*, and you get ₹500 credited after their order.
+
+Rooting for you. Keep me posted on offers!`
+  ),
+};
+
+function setWhatsAppTemplates(l){
+  const phone = (l.phone||'').replace(/\D/g,'');
+  const base  = phone ? `https://wa.me/91${phone}` : `https://wa.me/${WA_FALLBACK_PHONE}`;
+  const mk = key => `${base}?text=${encodeURIComponent(WA_TEMPLATES[key](l))}`;
+
+  const map = {
+    'dm-wa-intro':   'intro',
+    'dm-wa-recover': 'recover',
+    'dm-wa-onboard': 'onboard',
+    'dm-wa-deliver': 'deliver',
+    'dm-wa-review':  'review',
+  };
+  for (const [elId, key] of Object.entries(map)) {
+    const a = document.getElementById(elId);
+    if (a) a.href = mk(key);
+  }
+
+  // Dim templates that don't fit the lead's current stage — admin can still
+  // click them (override), but the suggested ones are visually brighter.
+  const stage = l.status || 'New';
+  const relevant = {
+    'New':              ['intro'],
+    'Resume Uploaded':  ['intro','onboard'],
+    'Pending Payment':  ['recover','intro'],
+    'Paid':             ['onboard','deliver'],
+    'In Progress':      ['onboard','deliver'],
+    'Completed':        ['review','deliver'],
+    'Lost':             ['intro','recover'],
+  }[stage] || ['intro'];
+
+  for (const [elId, key] of Object.entries(map)) {
+    const a = document.getElementById(elId);
+    if (!a) continue;
+    a.classList.toggle('disabled', !relevant.includes(key));
+  }
 }
 function closeModal(){ document.getElementById('detailModal').classList.remove('open'); }
 </script>
