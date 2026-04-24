@@ -282,11 +282,24 @@ app.post('/payments/order', paymentLimiter, async (req, res, next) => {
     };
     const { insertedId: leadId } = await getDb().collection('leads').insertOne(leadDoc);
 
-    const order = await createRzpOrder({
-      amountInr: amount,
-      receipt:   `rr_${leadId.toString().slice(-12)}`,
-      notes:     { packageName, leadId: leadId.toString(), email, phone },
-    });
+    let order;
+    try {
+      order = await createRzpOrder({
+        amountInr: amount,
+        receipt:   `rr_${leadId.toString().slice(-12)}`,
+        notes:     { packageName, leadId: leadId.toString(), email, phone },
+      });
+    } catch (rzpErr) {
+      // Razorpay SDK throws plain objects, not Error instances — so err.message
+      // is undefined. Extract the real cause so we can see it in pm2 logs.
+      const detail = rzpErr?.error?.description
+        || rzpErr?.message
+        || JSON.stringify(rzpErr, Object.getOwnPropertyNames(rzpErr || {}));
+      console.error('[rzp:order]', rzpErr?.statusCode || '', detail);
+      const err = new Error(detail || 'Razorpay order failed');
+      err.status = rzpErr?.statusCode || 502;
+      throw err;
+    }
 
     await getDb().collection('leads').updateOne(
       { _id: leadId },
@@ -404,11 +417,17 @@ app.get('/admin/users', requireAuth('admin'), async (_req, res, next) => {
 // ═══════════════════════════════════════════════════════════════════════════
 app.use((_req, res) => res.status(404).json({ error: 'Not found' }));
 
-app.use((err, _req, res, _next) => {
-  console.error('[err]', err.message);
+app.use((err, req, res, _next) => {
+  // Not all thrown values are Error instances — SDKs like Razorpay throw
+  // plain objects. Extract the best-available string for logs.
+  const detail = err?.message
+    || err?.error?.description
+    || (typeof err === 'string' ? err : '')
+    || (() => { try { return JSON.stringify(err, Object.getOwnPropertyNames(err || {})).slice(0, 600); } catch { return '<unserialisable error>'; } })();
+  console.error('[err]', req.method, req.path, '→', detail);
   const exposeDetail = env.NODE_ENV !== 'production';
-  res.status(err.status || 500).json({
-    error: exposeDetail ? err.message : 'Server error',
+  res.status(err?.status || err?.statusCode || 500).json({
+    error: exposeDetail ? detail : 'Server error',
   });
 });
 
