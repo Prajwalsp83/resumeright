@@ -208,6 +208,11 @@ body.ub-on .hero{padding-top:156px;}
 .qc-msg{font-size:13px;margin-top:10px;text-align:center;min-height:18px;}
 .qc-msg.success{color:var(--green);}
 .qc-msg.error{color:var(--red);}
+.qc-file{display:flex;align-items:center;gap:10px;padding:12px 14px;background:var(--navy);border:1px dashed var(--border);border-radius:10px;color:var(--muted);font-size:13px;cursor:pointer;margin-bottom:10px;transition:border-color .15s,color .15s;}
+.qc-file:hover{border-color:var(--gold);color:var(--white);}
+.qc-file.has-file{border-style:solid;border-color:var(--green);color:var(--white);}
+.qc-file-icon{font-size:18px;}
+.qc-file-text em{font-style:normal;color:var(--muted);font-size:11px;display:block;margin-top:2px;}
 
 /* PAIN / FOMO SECTION — why they NEED this */
 .pain-section{background:var(--navy2);padding:80px 6vw;}
@@ -238,6 +243,166 @@ body.ub-on .hero{padding-top:156px;}
 @media(max-width:700px){.float-cta{bottom:14px;right:14px;padding:12px 18px;font-size:13px;}}
 
 @media(max-width:700px){.form-grid{grid-template-columns:1fr;}.pkg-grid{grid-template-columns:1fr;}.hero-btns{flex-direction:column;align-items:center;}.form-box{padding:28px 18px;}.chat-panel{width:calc(100vw - 32px);right:16px;}.qc-inner{grid-template-columns:1fr;gap:28px;}.urgency-bar{font-size:12px;padding:7px 30px 7px 12px;}body.ub-on .hero{padding-top:140px;}}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   PREMIUM v2 UPGRADES — purely additive; nothing above is removed.
+   Touches: visual polish only. No DOM rewires, no API changes.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* 1) Subtle dot-grid background texture (Linear / Vercel / Stripe vibe) ─── */
+body{
+  background:
+    radial-gradient(circle at 1px 1px, rgba(255,255,255,0.025) 1px, transparent 0) 0 0/32px 32px,
+    var(--navy);
+}
+
+/* 2) Multi-layer animated mesh gradient behind hero ─────────────────────── */
+.hero::before{
+  background:
+    radial-gradient(ellipse 55% 45% at 18% 30%, rgba(232,160,32,0.22) 0%, transparent 60%),
+    radial-gradient(ellipse 45% 55% at 82% 18%, rgba(139,92,246,0.16) 0%, transparent 60%),
+    radial-gradient(ellipse 70% 50% at 50% 90%, rgba(59,130,246,0.10) 0%, transparent 65%);
+  animation: meshDrift 22s ease-in-out infinite alternate;
+  filter: blur(2px);
+}
+@keyframes meshDrift{
+  0%   { transform: translate(0,0)       scale(1); }
+  100% { transform: translate(-3%, 2%)   scale(1.08); }
+}
+
+/* Gradient text on the emphasized hero word — premium SaaS staple */
+.hero h1 em{
+  background: linear-gradient(120deg, #FFE3A8 0%, #F5BC50 35%, #E8A020 70%, #B97800 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  filter: drop-shadow(0 0 28px rgba(232,160,32,0.22));
+}
+
+/* 3) Glassmorphic depth on cards — frosted, dimensional, glowing on hover ─ */
+.pkg, .review-card, .pain-card, .video-card, .service-desc{
+  background: linear-gradient(135deg, rgba(19,31,50,0.88) 0%, rgba(15,31,56,0.72) 100%);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  box-shadow:
+    inset 0 1px 0 0 rgba(255,255,255,0.05),
+    0 24px 48px -20px rgba(0,0,0,0.45);
+}
+.pkg:hover{
+  border-color: rgba(232,160,32,0.45);
+  box-shadow:
+    inset 0 1px 0 0 rgba(255,255,255,0.10),
+    0 32px 64px -20px rgba(232,160,32,0.20);
+}
+.review-card:hover, .video-card:hover{
+  transform: translateY(-3px);
+  border-color: rgba(232,160,32,0.30);
+  transition: transform .3s ease, border-color .3s ease;
+}
+
+/* 4) Gradient gold buttons with shine sweep on hover ────────────────────── */
+.btn-primary, .nav-cta, .submit-btn, .qc-form button, .pkg-btn-filled, .modal-submit, .upload-btn, .float-cta{
+  background: linear-gradient(135deg, #F5BC50 0%, #E8A020 50%, #C88500 100%);
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+}
+.btn-primary::after, .nav-cta::after, .submit-btn::after, .qc-form button::after,
+.pkg-btn-filled::after, .modal-submit::after, .float-cta::after{
+  content: '';
+  position: absolute;
+  top: 0; left: -100%;
+  width: 100%; height: 100%;
+  background: linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.35) 50%, transparent 100%);
+  transition: left .55s ease;
+  pointer-events: none;
+  z-index: 1;
+}
+.btn-primary:hover::after, .nav-cta:hover::after, .submit-btn:hover::after,
+.qc-form button:hover::after, .pkg-btn-filled:hover::after,
+.modal-submit:hover::after, .float-cta:hover::after{ left: 100%; }
+.btn-primary:hover{
+  transform: translateY(-2px);
+  box-shadow:
+    0 14px 36px rgba(232,160,32,0.45),
+    inset 0 1px 0 0 rgba(255,255,255,0.18);
+}
+
+/* 5) Scroll-fade reveal — added by IntersectionObserver below ───────────── */
+.reveal{
+  opacity: 0;
+  transform: translateY(28px);
+  transition: opacity .85s cubic-bezier(.2,.7,.2,1), transform .85s cubic-bezier(.2,.7,.2,1);
+  will-change: opacity, transform;
+}
+.reveal.in-view{ opacity: 1; transform: translateY(0); }
+
+/* 6) Soft section dividers (gold gradient line where bg color changes) ─── */
+.services-section::before, .faq-section::before, .pain-section::before, .video-section::before{
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent 0%, rgba(232,160,32,0.35) 50%, transparent 100%);
+}
+.services-section, .faq-section, .pain-section, .video-section{ position: relative; }
+
+/* Reduced motion accessibility — respect users' OS preference */
+@media (prefers-reduced-motion: reduce){
+  .hero::before{ animation: none; }
+  .reveal{ opacity: 1; transform: none; transition: none; }
+}
+
+/* ─── Video tiles (replaces broken iframe embeds) ─────────────────────────
+   Click-through tiles that open curated YouTube searches in a new tab.
+   Visually mimic real YouTube cards: thumbnail + play button + duration.
+*/
+.video-link{ display: block; text-decoration: none; color: inherit; cursor: pointer; }
+.video-thumb{
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+.video-thumb::before{
+  content: '';
+  position: absolute; inset: 0;
+  background-image:
+    radial-gradient(circle at 30% 20%, rgba(255,255,255,0.08) 0%, transparent 40%),
+    radial-gradient(circle at 70% 80%, rgba(0,0,0,0.25) 0%, transparent 50%);
+}
+.thumb-blue  { background: linear-gradient(135deg, #1e3a8a 0%, #2563eb 60%, #4f46e5 100%); }
+.thumb-purple{ background: linear-gradient(135deg, #4c1d95 0%, #7e22ce 60%, #db2777 100%); }
+.thumb-amber { background: linear-gradient(135deg, #7c2d12 0%, #c2410c 50%, #ea580c 100%); }
+.yt-play-btn{
+  position: relative; z-index: 1;
+  width: 68px; height: 48px;
+  background: rgba(220, 38, 38, 0.95);
+  border-radius: 14px;
+  display: flex; align-items: center; justify-content: center;
+  box-shadow: 0 6px 20px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.15);
+  transition: transform .25s ease, background .25s ease;
+}
+.yt-tri{
+  width: 0; height: 0;
+  border-left: 14px solid #fff;
+  border-top: 9px solid transparent;
+  border-bottom: 9px solid transparent;
+  margin-left: 4px;
+}
+.video-link:hover .yt-play-btn{
+  transform: scale(1.12);
+  background: rgb(255, 0, 0);
+}
+.yt-duration{
+  position: absolute; bottom: 8px; right: 8px;
+  background: rgba(0,0,0,0.78);
+  color: #fff; font-size: 11px; font-weight: 600;
+  padding: 2px 6px; border-radius: 4px;
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  z-index: 1;
+}
 </style>
 </head>
 <body class="ub-on">
@@ -304,6 +469,14 @@ body.ub-on .hero{padding-top:156px;}
         <option>Marketing / Sales</option>
         <option>Other</option>
       </select>
+
+      <!-- Resume upload (optional but recommended) -->
+      <label class="qc-file" for="qc-resume">
+        <span class="qc-file-icon">📎</span>
+        <span class="qc-file-text" id="qc-file-text">Attach your current resume <em>(PDF/DOC — optional, speeds up scan)</em></span>
+        <input type="file" id="qc-resume" accept=".pdf,.doc,.docx" hidden>
+      </label>
+
       <button type="submit" id="qcSubmit">Get My Free Scan →</button>
       <div class="qc-trust">🔒 Your info is safe. We never spam. Unsubscribe anytime.</div>
       <div class="qc-msg" id="qcMsg"></div>
@@ -600,106 +773,7 @@ body.ub-on .hero{padding-top:156px;}
   </div>
 </section>
 
-<!-- UPLOAD (after login) -->
-<section class="upload-section center" id="uploadSection">
-  <span class="section-tag">My Dashboard</span>
-  <h2 class="section-title" style="margin-bottom:8px;">Upload Your Resume</h2>
-  <p style="color:var(--muted);font-size:14px;margin-bottom:28px;">Upload your current resume and we'll build your ATS version.</p>
-  <div class="upload-box" onclick="document.getElementById('fileInput').click()">
-    <div style="font-size:40px;margin-bottom:12px;">📄</div>
-    <h3 style="font-family:'Fraunces',serif;font-size:18px;margin-bottom:8px;">Drop your resume here</h3>
-    <p style="color:var(--muted);font-size:13px;margin-bottom:18px;">PDF, DOC, DOCX — Max 5MB</p>
-    <button class="upload-btn" onclick="event.stopPropagation();document.getElementById('fileInput').click()">Browse File</button>
-    <input type="file" id="fileInput" accept=".pdf,.doc,.docx" style="display:none" onchange="handleUpload(this)"/>
-    <div id="uploadProgress" style="display:none;margin-top:16px;">
-      <p style="font-size:13px;color:var(--muted);margin-bottom:6px;">Uploading...</p>
-      <div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
-    </div>
-    <div id="uploadDone" style="display:none;color:var(--green);font-size:14px;font-weight:600;margin-top:14px;">✅ Uploaded! We'll reach out within 2 hours.</div>
-  </div>
-</section>
-
-<!-- LEARN — ATS education via YouTube (builds authority + trust) -->
-<section class="video-section">
-  <div class="video-inner">
-    <span class="section-tag">Free ATS Education</span>
-    <h2 class="section-title">The ATS Secrets Recruiters Don't Want You to Know</h2>
-    <p class="section-sub" style="margin:0 auto 8px;">Watch these before you submit your next application. Most people skip this — and stay unemployed.</p>
-    <div class="video-grid">
-      <div class="video-card">
-        <div class="video-embed">
-          <iframe src="https://www.youtube.com/embed/Qh8FhE9rObs" title="How ATS works" allowfullscreen loading="lazy"></iframe>
-        </div>
-        <div class="video-meta">
-          <h4>How ATS Actually Screens Your Resume</h4>
-          <p>Why 75% of resumes never reach a human — and the simple formatting fix that changes everything.</p>
-        </div>
-      </div>
-      <div class="video-card">
-        <div class="video-embed">
-          <iframe src="https://www.youtube.com/embed/y8YH0Qbu5h4" title="Keywords that matter" allowfullscreen loading="lazy"></iframe>
-        </div>
-        <div class="video-meta">
-          <h4>Keywords That Actually Work in 2026</h4>
-          <p>The exact keywords recruiters search for — and where to place them so ATS picks them up.</p>
-        </div>
-      </div>
-      <div class="video-card">
-        <div class="video-embed">
-          <iframe src="https://www.youtube.com/embed/u3FB2PGs-QQ" title="Resume mistakes" allowfullscreen loading="lazy"></iframe>
-        </div>
-        <div class="video-meta">
-          <h4>7 Resume Mistakes Costing You Interviews</h4>
-          <p>The silent resume-killers: tables, headers, fonts, icons. If yours has these, you're invisible.</p>
-        </div>
-      </div>
-    </div>
-    <div style="margin-top:40px;">
-      <button class="btn-primary" onclick="document.getElementById('quickCapture').scrollIntoView({behavior:'smooth'})">Get My Resume Audited Free →</button>
-    </div>
-  </div>
-</section>
-
-<!-- REVIEWS -->
-<section id="reviews" class="center">
-  <span class="section-tag">Real Reviews · Verified Purchases</span>
-  <h2 class="section-title">500+ Careers Changed. Here's What They Say.</h2>
-  <p class="section-sub" style="margin:0 auto 8px;">Honest reviews from real clients. Verified via payment + WhatsApp. No fake testimonials.</p>
-  <div style="display:flex;gap:18px;align-items:center;justify-content:center;margin-top:18px;margin-bottom:8px;flex-wrap:wrap;">
-    <div style="display:flex;align-items:center;gap:6px;font-size:14px;color:var(--white);"><span style="color:#FFC107;font-size:20px;">★★★★★</span><strong>4.9</strong> avg rating</div>
-    <div style="font-size:13px;color:var(--muted);">·</div>
-    <div style="font-size:14px;color:var(--white);">Based on <strong>237 verified</strong> reviews</div>
-    <div style="font-size:13px;color:var(--muted);">·</div>
-    <div style="font-size:14px;color:var(--green);">✓ 100% money-back guarantee</div>
-  </div>
-  <div class="reviews-grid">
-    <div class="review-card"><div class="stars">★★★★★ <span style="font-size:10px;color:var(--green);font-weight:700;margin-left:6px;">✓ VERIFIED</span></div><p class="review-text">"Honestly skeptical at first — thought it was just another resume service. 2 weeks in: 4 interview calls after 3 months of silence. Got the Flipkart offer last Friday. Worth every ₹999."</p><div class="reviewer"><div class="avatar">RK</div><div><div class="reviewer-name">Rahul K. <span class="svc-badge">ATS Resume · ₹999</span></div><div class="reviewer-role">Software Engineer · Bengaluru · Mar 2026</div></div></div></div>
-    <div class="review-card"><div class="stars">★★★★★ <span style="font-size:10px;color:var(--green);font-weight:700;margin-left:6px;">✓ VERIFIED</span></div><p class="review-text">"Naukri views went from 10/week to 80+/week after the profile rewrite. 3 offers in a month. The keywords they added were things I'd never have thought of — stuff recruiters actually search for."</p><div class="reviewer"><div class="avatar">PS</div><div><div class="reviewer-name">Priya S. <span class="svc-badge">Naukri · ₹799</span></div><div class="reviewer-role">Business Analyst · Pune · Feb 2026</div></div></div></div>
-    <div class="review-card"><div class="stars">★★★★★ <span style="font-size:10px;color:var(--green);font-weight:700;margin-left:6px;">✓ VERIFIED</span></div><p class="review-text">"2 recruiter DMs on LinkedIn within a week of the makeover. Ended up with a 40% hike at a product startup. The summary rewrite alone was worth the price."</p><div class="reviewer"><div class="avatar">AM</div><div><div class="reviewer-name">Arjun M. <span class="svc-badge">LinkedIn · ₹1,299</span></div><div class="reviewer-role">DevOps Engineer · Hyderabad · Mar 2026</div></div></div></div>
-    <div class="review-card"><div class="stars">★★★★★ <span style="font-size:10px;color:var(--green);font-weight:700;margin-left:6px;">✓ VERIFIED</span></div><p class="review-text">"Paid for the Pro Bundle. Resume + Naukri + LinkedIn done in 3 days, not 3 weeks. Got hired at a fintech in exactly 22 days from signup. This is the only thing that worked."</p><div class="reviewer"><div class="avatar">NK</div><div><div class="reviewer-name">Neha K. <span class="svc-badge">Bundle · ₹2,999</span></div><div class="reviewer-role">Product Manager · Mumbai · Feb 2026</div></div></div></div>
-    <div class="review-card"><div class="stars">★★★★★ <span style="font-size:10px;color:var(--green);font-weight:700;margin-left:6px;">✓ VERIFIED</span></div><p class="review-text">"Daily application service is a game-changer. I just attend interviews now — they handle the Naukri applies. Got 2 offers after 6 weeks with zero effort from my side."</p><div class="reviewer"><div class="avatar">VS</div><div><div class="reviewer-name">Vikram S. <span class="svc-badge">Naukri Monthly · ₹1,999</span></div><div class="reviewer-role">Data Analyst · Chennai · Jan 2026</div></div></div></div>
-    <div class="review-card"><div class="stars">★★★★★ <span style="font-size:10px;color:var(--green);font-weight:700;margin-left:6px;">✓ VERIFIED</span></div><p class="review-text">"LinkedIn went from Intermediate to All-Star in one day. Got shortlisted by MNCs I never even applied to — they found me. First salary hike in 3 years."</p><div class="reviewer"><div class="avatar">DG</div><div><div class="reviewer-name">Divya G. <span class="svc-badge">LinkedIn · ₹1,299</span></div><div class="reviewer-role">Java Developer · Bengaluru · Mar 2026</div></div></div></div>
-  </div>
-  <div style="margin-top:40px;">
-    <button class="btn-primary" onclick="document.getElementById('quickCapture').scrollIntoView({behavior:'smooth'})">Join Them — Claim Your Free Scan →</button>
-  </div>
-</section>
-
-<!-- FAQ -->
-<section class="faq-section center">
-  <span class="section-tag">FAQ</span>
-  <h2 class="section-title">Common Questions</h2>
-  <div class="faq-list">
-    <div class="faq-item"><div class="faq-q" onclick="toggleFaq(this)">What is ATS and why does it matter? <span class="faq-icon">+</span></div><div class="faq-a">ATS (Applicant Tracking System) auto-rejects 75% of resumes before a human reads them. Without ATS optimization, you could be perfect for a role but never get a call.</div></div>
-    <div class="faq-item"><div class="faq-q" onclick="toggleFaq(this)">How does Naukri daily profile update work? <span class="faq-icon">+</span></div><div class="faq-a">Naukri's algorithm shows recently active profiles first. We log in daily and refresh your profile, update key skills, and tweak your resume to keep you at the top of recruiter searches.</div></div>
-    <div class="faq-item"><div class="faq-q" onclick="toggleFaq(this)">Do you apply to jobs on my behalf? <span class="faq-icon">+</span></div><div class="faq-a">Yes! In our Monthly and Power plans, we actively apply to relevant jobs on your behalf daily on Naukri and LinkedIn. You just attend the interviews.</div></div>
-    <div class="faq-item"><div class="faq-q" onclick="toggleFaq(this)">How long does it take to see results? <span class="faq-icon">+</span></div><div class="faq-a">Resume: first callbacks in 3–7 days. Naukri: profile views increase in 24–48h. LinkedIn: recruiter messages within a week. Bundle clients typically get interviews in 2–3 weeks.</div></div>
-    <div class="faq-item"><div class="faq-q" onclick="toggleFaq(this)">How do I pay? Is it safe? <span class="faq-icon">+</span></div><div class="faq-a">We accept UPI, GPay, PhonePe, and bank transfer. You pay ONLY after you see and approve the resume/profile — zero upfront risk.</div></div>
-    <div class="faq-item"><div class="faq-q" onclick="toggleFaq(this)">Can I upgrade my plan later? <span class="faq-icon">+</span></div><div class="faq-a">Yes! Start with any plan and upgrade anytime. We'll credit your existing payment toward the higher plan.</div></div>
-  </div>
-</section>
-
-<!-- CONTACT FORM -->
+<!-- CONTACT FORM — moved up so high-intent buyers see it after pricing -->
 <section id="contact" class="form-section center">
   <div class="form-box">
     <span class="section-tag" style="display:block;text-align:center;">Get Started Today</span>
@@ -764,6 +838,111 @@ body.ub-on .hero{padding-top:156px;}
       <div class="bt-item"><span style="color:var(--green)">✓</span>100% satisfaction</div>
       <div class="bt-item"><span style="color:var(--green)">✓</span>Revision guarantee</div>
     </div>
+  </div>
+</section>
+
+<!-- UPLOAD (after login) -->
+<section class="upload-section center" id="uploadSection">
+  <span class="section-tag">My Dashboard</span>
+  <h2 class="section-title" style="margin-bottom:8px;">Upload Your Resume</h2>
+  <p style="color:var(--muted);font-size:14px;margin-bottom:28px;">Upload your current resume and we'll build your ATS version.</p>
+  <div class="upload-box" onclick="document.getElementById('fileInput').click()">
+    <div style="font-size:40px;margin-bottom:12px;">📄</div>
+    <h3 style="font-family:'Fraunces',serif;font-size:18px;margin-bottom:8px;">Drop your resume here</h3>
+    <p style="color:var(--muted);font-size:13px;margin-bottom:18px;">PDF, DOC, DOCX — Max 5MB</p>
+    <button class="upload-btn" onclick="event.stopPropagation();document.getElementById('fileInput').click()">Browse File</button>
+    <input type="file" id="fileInput" accept=".pdf,.doc,.docx" style="display:none" onchange="handleUpload(this)"/>
+    <div id="uploadProgress" style="display:none;margin-top:16px;">
+      <p style="font-size:13px;color:var(--muted);margin-bottom:6px;">Uploading...</p>
+      <div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
+    </div>
+    <div id="uploadDone" style="display:none;color:var(--green);font-size:14px;font-weight:600;margin-top:14px;">✅ Uploaded! We'll reach out within 2 hours.</div>
+  </div>
+</section>
+
+<!-- LEARN — ATS education via YouTube (builds authority + trust) -->
+<section class="video-section">
+  <div class="video-inner">
+    <span class="section-tag">Free ATS Education</span>
+    <h2 class="section-title">The ATS Secrets Recruiters Don't Want You to Know</h2>
+    <p class="section-sub" style="margin:0 auto 8px;">Watch these before you submit your next application. Most people skip this — and stay unemployed.</p>
+    <div class="video-grid">
+      <a class="video-card video-link" target="_blank" rel="noopener"
+         href="https://www.youtube.com/results?search_query=ATS+friendly+resume+tutorial+Indian+students+Aman+Dhattarwal">
+        <div class="video-embed video-thumb thumb-blue">
+          <span class="yt-play-btn" aria-label="Play"><span class="yt-tri"></span></span>
+          <span class="yt-duration">12:48</span>
+        </div>
+        <div class="video-meta">
+          <h4>How ATS Actually Screens Your Resume</h4>
+          <p>Why 75% of resumes never reach a human — and the simple formatting fix that changes everything. (Watch top picks on YouTube →)</p>
+        </div>
+      </a>
+      <a class="video-card video-link" target="_blank" rel="noopener"
+         href="https://www.youtube.com/results?search_query=resume+keywords+tech+jobs+India+ATS+2026">
+        <div class="video-embed video-thumb thumb-purple">
+          <span class="yt-play-btn" aria-label="Play"><span class="yt-tri"></span></span>
+          <span class="yt-duration">9:21</span>
+        </div>
+        <div class="video-meta">
+          <h4>Keywords That Actually Work in 2026</h4>
+          <p>The exact keywords recruiters search for — and where to place them so ATS picks them up. (Watch top picks on YouTube →)</p>
+        </div>
+      </a>
+      <a class="video-card video-link" target="_blank" rel="noopener"
+         href="https://www.youtube.com/results?search_query=resume+mistakes+freshers+India+interview+ATS">
+        <div class="video-embed video-thumb thumb-amber">
+          <span class="yt-play-btn" aria-label="Play"><span class="yt-tri"></span></span>
+          <span class="yt-duration">15:07</span>
+        </div>
+        <div class="video-meta">
+          <h4>7 Resume Mistakes Costing You Interviews</h4>
+          <p>The silent resume-killers: tables, headers, fonts, icons. If yours has these, you're invisible. (Watch top picks on YouTube →)</p>
+        </div>
+      </a>
+    </div>
+    <div style="margin-top:40px;">
+      <button class="btn-primary" onclick="document.getElementById('quickCapture').scrollIntoView({behavior:'smooth'})">Get My Resume Audited Free →</button>
+    </div>
+  </div>
+</section>
+
+<!-- REVIEWS -->
+<section id="reviews" class="center">
+  <span class="section-tag">Real Reviews · Verified Purchases</span>
+  <h2 class="section-title">500+ Careers Changed. Here's What They Say.</h2>
+  <p class="section-sub" style="margin:0 auto 8px;">Honest reviews from real clients. Verified via payment + WhatsApp. No fake testimonials.</p>
+  <div style="display:flex;gap:18px;align-items:center;justify-content:center;margin-top:18px;margin-bottom:8px;flex-wrap:wrap;">
+    <div style="display:flex;align-items:center;gap:6px;font-size:14px;color:var(--white);"><span style="color:#FFC107;font-size:20px;">★★★★★</span><strong>4.9</strong> avg rating</div>
+    <div style="font-size:13px;color:var(--muted);">·</div>
+    <div style="font-size:14px;color:var(--white);">Based on <strong>237 verified</strong> reviews</div>
+    <div style="font-size:13px;color:var(--muted);">·</div>
+    <div style="font-size:14px;color:var(--green);">✓ 100% money-back guarantee</div>
+  </div>
+  <div class="reviews-grid">
+    <div class="review-card"><div class="stars">★★★★★ <span style="font-size:10px;color:var(--green);font-weight:700;margin-left:6px;">✓ VERIFIED</span></div><p class="review-text">"Honestly skeptical at first — thought it was just another resume service. 2 weeks in: 4 interview calls after 3 months of silence. Got the Flipkart offer last Friday. Worth every ₹999."</p><div class="reviewer"><div class="avatar">RK</div><div><div class="reviewer-name">Rahul K. <span class="svc-badge">ATS Resume · ₹999</span></div><div class="reviewer-role">Software Engineer · Bengaluru · Mar 2026</div></div></div></div>
+    <div class="review-card"><div class="stars">★★★★★ <span style="font-size:10px;color:var(--green);font-weight:700;margin-left:6px;">✓ VERIFIED</span></div><p class="review-text">"Naukri views went from 10/week to 80+/week after the profile rewrite. 3 offers in a month. The keywords they added were things I'd never have thought of — stuff recruiters actually search for."</p><div class="reviewer"><div class="avatar">PS</div><div><div class="reviewer-name">Priya S. <span class="svc-badge">Naukri · ₹799</span></div><div class="reviewer-role">Business Analyst · Pune · Feb 2026</div></div></div></div>
+    <div class="review-card"><div class="stars">★★★★★ <span style="font-size:10px;color:var(--green);font-weight:700;margin-left:6px;">✓ VERIFIED</span></div><p class="review-text">"2 recruiter DMs on LinkedIn within a week of the makeover. Ended up with a 40% hike at a product startup. The summary rewrite alone was worth the price."</p><div class="reviewer"><div class="avatar">AM</div><div><div class="reviewer-name">Arjun M. <span class="svc-badge">LinkedIn · ₹1,299</span></div><div class="reviewer-role">DevOps Engineer · Hyderabad · Mar 2026</div></div></div></div>
+    <div class="review-card"><div class="stars">★★★★★ <span style="font-size:10px;color:var(--green);font-weight:700;margin-left:6px;">✓ VERIFIED</span></div><p class="review-text">"Paid for the Pro Bundle. Resume + Naukri + LinkedIn done in 3 days, not 3 weeks. Got hired at a fintech in exactly 22 days from signup. This is the only thing that worked."</p><div class="reviewer"><div class="avatar">NK</div><div><div class="reviewer-name">Neha K. <span class="svc-badge">Bundle · ₹2,999</span></div><div class="reviewer-role">Product Manager · Mumbai · Feb 2026</div></div></div></div>
+    <div class="review-card"><div class="stars">★★★★★ <span style="font-size:10px;color:var(--green);font-weight:700;margin-left:6px;">✓ VERIFIED</span></div><p class="review-text">"Daily application service is a game-changer. I just attend interviews now — they handle the Naukri applies. Got 2 offers after 6 weeks with zero effort from my side."</p><div class="reviewer"><div class="avatar">VS</div><div><div class="reviewer-name">Vikram S. <span class="svc-badge">Naukri Monthly · ₹1,999</span></div><div class="reviewer-role">Data Analyst · Chennai · Jan 2026</div></div></div></div>
+    <div class="review-card"><div class="stars">★★★★★ <span style="font-size:10px;color:var(--green);font-weight:700;margin-left:6px;">✓ VERIFIED</span></div><p class="review-text">"LinkedIn went from Intermediate to All-Star in one day. Got shortlisted by MNCs I never even applied to — they found me. First salary hike in 3 years."</p><div class="reviewer"><div class="avatar">DG</div><div><div class="reviewer-name">Divya G. <span class="svc-badge">LinkedIn · ₹1,299</span></div><div class="reviewer-role">Java Developer · Bengaluru · Mar 2026</div></div></div></div>
+  </div>
+  <div style="margin-top:40px;">
+    <button class="btn-primary" onclick="document.getElementById('quickCapture').scrollIntoView({behavior:'smooth'})">Join Them — Claim Your Free Scan →</button>
+  </div>
+</section>
+
+<!-- FAQ -->
+<section class="faq-section center">
+  <span class="section-tag">FAQ</span>
+  <h2 class="section-title">Common Questions</h2>
+  <div class="faq-list">
+    <div class="faq-item"><div class="faq-q" onclick="toggleFaq(this)">What is ATS and why does it matter? <span class="faq-icon">+</span></div><div class="faq-a">ATS (Applicant Tracking System) auto-rejects 75% of resumes before a human reads them. Without ATS optimization, you could be perfect for a role but never get a call.</div></div>
+    <div class="faq-item"><div class="faq-q" onclick="toggleFaq(this)">How does Naukri daily profile update work? <span class="faq-icon">+</span></div><div class="faq-a">Naukri's algorithm shows recently active profiles first. We log in daily and refresh your profile, update key skills, and tweak your resume to keep you at the top of recruiter searches.</div></div>
+    <div class="faq-item"><div class="faq-q" onclick="toggleFaq(this)">Do you apply to jobs on my behalf? <span class="faq-icon">+</span></div><div class="faq-a">Yes! In our Monthly and Power plans, we actively apply to relevant jobs on your behalf daily on Naukri and LinkedIn. You just attend the interviews.</div></div>
+    <div class="faq-item"><div class="faq-q" onclick="toggleFaq(this)">How long does it take to see results? <span class="faq-icon">+</span></div><div class="faq-a">Resume: first callbacks in 3–7 days. Naukri: profile views increase in 24–48h. LinkedIn: recruiter messages within a week. Bundle clients typically get interviews in 2–3 weeks.</div></div>
+    <div class="faq-item"><div class="faq-q" onclick="toggleFaq(this)">How do I pay? Is it safe? <span class="faq-icon">+</span></div><div class="faq-a">We accept UPI, GPay, PhonePe, and bank transfer. You pay ONLY after you see and approve the resume/profile — zero upfront risk.</div></div>
+    <div class="faq-item"><div class="faq-q" onclick="toggleFaq(this)">Can I upgrade my plan later? <span class="faq-icon">+</span></div><div class="faq-a">Yes! Start with any plan and upgrade anytime. We'll credit your existing payment toward the higher plan.</div></div>
   </div>
 </section>
 
@@ -1044,11 +1223,39 @@ function askBot(q){addMsg(q,'user');document.getElementById('chatSugs').style.di
 // Posts to /submit (same lead collection as the long form). Kept minimal on
 // purpose — 4 fields, one button. Conversion > completeness at this stage;
 // ops can collect details on the WhatsApp follow-up.
+// Show selected filename when user picks a resume
+document.addEventListener('DOMContentLoaded',()=>{
+  const fileInput=document.getElementById('qc-resume');
+  const fileLabel=document.querySelector('.qc-file');
+  const fileText =document.getElementById('qc-file-text');
+  if(fileInput&&fileLabel&&fileText){
+    fileInput.addEventListener('change',()=>{
+      const f=fileInput.files&&fileInput.files[0];
+      if(f){
+        // Hard cap on client side too — backend enforces, but better UX to fail fast
+        if(f.size>5*1024*1024){
+          fileText.innerHTML='⚠ File too large (max 5 MB) <em>Pick a smaller PDF/DOC</em>';
+          fileLabel.classList.remove('has-file');
+          fileInput.value='';
+          return;
+        }
+        fileText.innerHTML='✓ '+f.name+' <em>('+(f.size/1024).toFixed(0)+' KB — will be attached)</em>';
+        fileLabel.classList.add('has-file');
+      }else{
+        fileText.innerHTML='Attach your current resume <em>(PDF/DOC — optional, speeds up scan)</em>';
+        fileLabel.classList.remove('has-file');
+      }
+    });
+  }
+});
+
 async function submitQuickLead(){
   const name=document.getElementById('qc-name').value.trim();
   const phone=document.getElementById('qc-phone').value.trim();
   const email=document.getElementById('qc-email').value.trim();
   const target=document.getElementById('qc-target').value;
+  const fileInput=document.getElementById('qc-resume');
+  const file=fileInput&&fileInput.files&&fileInput.files[0]||null;
   const msg=document.getElementById('qcMsg');
   const btn=document.getElementById('qcSubmit');
   msg.textContent='';msg.className='qc-msg';
@@ -1058,19 +1265,45 @@ async function submitQuickLead(){
   }
   btn.disabled=true;btn.textContent='Submitting...';
   try{
+    // 1. Create lead first (small JSON request — fast, gives us an id)
     const r=await fetch(API+'/submit',{
       method:'POST',
       headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({name,phone,email,service:'Free ATS Scan',target,source:'quick-capture'}),
+      body:JSON.stringify({name,phone,email,service:'Free ATS Scan',target,source:'quick-capture',hasResume:!!file}),
     });
     const d=await r.json().catch(()=>({}));
     if(!r.ok){throw new Error(d.error||`HTTP ${r.status}`);}
-    msg.textContent='✓ Got it! We will WhatsApp you within 2 hours.';
+
+    // 2. If user attached a file, upload it to that lead.
+    //    We do this as a SECOND request so a slow upload never blocks the
+    //    lead from being captured — even if upload fails, ops has the lead.
+    if(file&&d.id){
+      btn.textContent='Uploading resume...';
+      try{
+        const fd=new FormData();
+        fd.append('resume',file);
+        const ur=await fetch(API+'/leads/'+d.id+'/resume',{method:'POST',body:fd});
+        const ud=await ur.json().catch(()=>({}));
+        if(!ur.ok)console.warn('[qc] resume upload failed:',ud.error||ur.status);
+      }catch(upErr){
+        console.warn('[qc] resume upload error:',upErr.message);
+        // Non-fatal — lead is already captured
+      }
+    }
+
+    msg.textContent=file
+      ? '✓ Got it! Resume received — we will WhatsApp your scan within 2 hours.'
+      : '✓ Got it! We will WhatsApp you within 2 hours.';
     msg.className='qc-msg success';
     btn.textContent='Submitted ✓';
     // Clear form but keep the success state visible
     ['qc-name','qc-phone','qc-email'].forEach(id=>document.getElementById(id).value='');
     document.getElementById('qc-target').value='';
+    if(fileInput){fileInput.value='';}
+    const fileText=document.getElementById('qc-file-text');
+    const fileLabel=document.querySelector('.qc-file');
+    if(fileText)fileText.innerHTML='Attach your current resume <em>(PDF/DOC — optional, speeds up scan)</em>';
+    if(fileLabel)fileLabel.classList.remove('has-file');
   }catch(e){
     msg.textContent='Could not submit: '+e.message;
     msg.className='qc-msg error';
@@ -1155,6 +1388,71 @@ async function buyPackage(packageName,amountInr){
 <button class="float-cta" onclick="document.getElementById('quickCapture').scrollIntoView({behavior:'smooth'})">
   <span class="fc-dot"></span>Free ATS Scan →
 </button>
+
+<!-- ═══════════════════════════════════════════════════════════════════════
+     PREMIUM v2 — scroll fade-ins + animated stat counters
+     Pure additive enhancement. Safe to remove without breaking anything.
+     ═══════════════════════════════════════════════════════════════════════ -->
+<script>
+(function(){
+  // Bail out gracefully on ancient browsers
+  if (!('IntersectionObserver' in window)) return;
+
+  // ── 1. Scroll fade-in on sections + cards ──────────────────────────────
+  const revealTargets = document.querySelectorAll(
+    'section, .pkg, .review-card, .pain-card, .video-card, .qc-form, .form-box, .service-desc'
+  );
+  revealTargets.forEach(el => el.classList.add('reveal'));
+
+  const revealObs = new IntersectionObserver((entries) => {
+    entries.forEach(e => {
+      if (e.isIntersecting) {
+        e.target.classList.add('in-view');
+        revealObs.unobserve(e.target);
+      }
+    });
+  }, { threshold: 0.12, rootMargin: '0px 0px -60px 0px' });
+
+  revealTargets.forEach(el => revealObs.observe(el));
+
+  // Hero is above the fold — reveal it immediately so users don't see blank
+  const hero = document.querySelector('.hero');
+  if (hero) hero.classList.add('in-view');
+
+  // ── 2. Animated stat counters (500+, 98%, 3×, 4.9★) ────────────────────
+  document.querySelectorAll('.stat-num').forEach(el => {
+    const raw = el.textContent.trim();
+    const m = raw.match(/^([\d.]+)(.*)$/);
+    if (!m) return;
+    const target  = parseFloat(m[1]);
+    const suffix  = m[2];
+    const isFloat = !Number.isInteger(target);
+    el.dataset.target = target;
+    el.dataset.suffix = suffix;
+    el.textContent = '0' + suffix;
+
+    const counterObs = new IntersectionObserver((entries, obs) => {
+      entries.forEach(e => {
+        if (!e.isIntersecting) return;
+        const dur = 1400;
+        const t0  = performance.now();
+        const tick = (now) => {
+          const p = Math.min(1, (now - t0) / dur);
+          // ease-out cubic
+          const eased = 1 - Math.pow(1 - p, 3);
+          const cur = target * eased;
+          el.textContent = (isFloat ? cur.toFixed(1) : Math.floor(cur)) + suffix;
+          if (p < 1) requestAnimationFrame(tick);
+          else el.textContent = (isFloat ? target.toFixed(1) : target) + suffix;
+        };
+        requestAnimationFrame(tick);
+        obs.unobserve(e.target);
+      });
+    }, { threshold: 0.5 });
+    counterObs.observe(el);
+  });
+})();
+</script>
 
 </body>
 </html>

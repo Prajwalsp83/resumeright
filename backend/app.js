@@ -92,6 +92,9 @@ const generalLimiter = rateLimit({
 });
 const authLimiter   = rateLimit({ windowMs: 15 * 60 * 1000, max: 20, standardHeaders: true });
 const submitLimiter = rateLimit({ windowMs: 60 * 1000,      max: 5,  standardHeaders: true });
+// Public resume upload from the quick-capture form. Tighter than submit because
+// each request streams a file to S3 — keep it cheap and abuse-resistant.
+const leadResumeLimiter = rateLimit({ windowMs: 60 * 1000, max: 3, standardHeaders: true });
 
 app.use(generalLimiter);
 
@@ -231,6 +234,54 @@ app.post('/upload', requireAuth('user'), (req, res, next) => {
         createdAt:    new Date(),
       };
       await getDb().collection('leads').insertOne(doc);
+      res.json({ success: true });
+    } catch (e) { next(e); }
+  });
+});
+
+// ───────────────────────────────────────────────────────────────────────────
+// PUBLIC RESUME ATTACH — for the quick-capture / free-scan form.
+// Flow: frontend POSTs /submit (creates a lead, returns id), then if the user
+// attached a file it POSTs /leads/:id/resume with the file as multipart.
+// Anti-abuse: rate-limited, only allowed within 10 minutes of lead creation,
+// and only if the lead doesn't already have a resume attached.
+// Does NOT touch /submit or /upload — completely additive.
+// ───────────────────────────────────────────────────────────────────────────
+app.post('/leads/:id/resume', leadResumeLimiter, (req, res, next) => {
+  uploader.single('resume')(req, res, async err => {
+    if (err) return bad(res, err.message);
+    if (!req.file) return bad(res, 'No file uploaded');
+
+    try {
+      const id = req.params.id;
+      if (!ObjectId.isValid(id)) return bad(res, 'Invalid lead id', 404);
+
+      const leads = getDb().collection('leads');
+      const lead = await leads.findOne({ _id: new ObjectId(id) });
+      if (!lead) return bad(res, 'Lead not found', 404);
+
+      // Anti-abuse: only allow attachment shortly after lead creation,
+      // and only once. Anything else is suspicious.
+      const ageMs = Date.now() - new Date(lead.createdAt || 0).getTime();
+      if (ageMs > 10 * 60 * 1000) return bad(res, 'Lead too old for attachment', 410);
+      if (lead.s3Key || lead.localPath) return bad(res, 'Resume already attached', 409);
+
+      const f = req.file;
+      await leads.updateOne(
+        { _id: lead._id },
+        {
+          $set: {
+            originalName: f.originalname,
+            s3Key:        s3Enabled ? f.key    : null,
+            s3Bucket:     s3Enabled ? f.bucket : null,
+            localPath:    s3Enabled ? null     : f.filename,
+            sizeBytes:    f.size,
+            mimeType:     f.mimetype,
+            status:       'Resume Attached',
+            updatedAt:    new Date(),
+          },
+        },
+      );
       res.json({ success: true });
     } catch (e) { next(e); }
   });
