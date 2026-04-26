@@ -1176,6 +1176,7 @@ async function submitForm(){
   }catch(e){}
   document.getElementById('form-area').style.display='none';
   document.getElementById('form-success').style.display='block';
+  window.__rrFormSubmitted=true; // suppress abandonment beacon
 }
 
 // FAQ
@@ -1321,6 +1322,7 @@ async function submitQuickLead(){
       : '✓ Got it! We will WhatsApp you within 2 hours.';
     msg.className='qc-msg success';
     btn.textContent='Submitted ✓';
+    window.__rrFormSubmitted=true; // suppress abandonment beacon
     // Clear form but keep the success state visible
     ['qc-name','qc-phone','qc-email'].forEach(id=>document.getElementById(id).value='');
     document.getElementById('qc-target').value='';
@@ -1335,6 +1337,79 @@ async function submitQuickLead(){
     btn.disabled=false;btn.textContent='Get My Free Scan →';
   }
 }
+
+// ─── ABANDONED LEAD CAPTURE ─────────────────────────────────────────────────
+// Conservative trigger: only fire if the visitor put a real phone number in
+// either form AND at least one other identifier (name or email). Once the
+// form is submitted successfully, window.__rrFormSubmitted=true and the
+// beacon is suppressed forever for this page-view.
+// Uses navigator.sendBeacon so the request still goes out after the tab
+// closes / navigates away. Beacon body is JSON-typed Blob so the backend's
+// express.json() middleware picks it up exactly like a normal POST.
+(function setupAbandonCapture(){
+  const PHONE_MIN = 7;            // minimum digits to consider "real"
+  const EMAIL_RE  = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  const FORMS = [
+    { prefix:'qc', service:'Quick Scan (abandoned)', fields:{name:'qc-name',phone:'qc-phone',email:'qc-email',target:'qc-target'} },
+    { prefix:'f',  service:'Lead Form (abandoned)',  fields:{name:'f-name', phone:'f-phone', email:'f-email', service:'f-service'} },
+  ];
+  let fired = false;
+
+  function val(id){const el=document.getElementById(id); return el?el.value.trim():'';}
+  function digits(s){return (s||'').replace(/\D/g,'');}
+
+  function pickAbandonedForm(){
+    for(const f of FORMS){
+      const phone = val(f.fields.phone);
+      const name  = val(f.fields.name);
+      const email = val(f.fields.email);
+      if(digits(phone).length < PHONE_MIN) continue;
+      if(!name && !EMAIL_RE.test(email))   continue;
+      const filled=[];
+      Object.entries(f.fields).forEach(([k,id])=>{ if(val(id)) filled.push(k); });
+      const serviceField = f.fields.service ? val(f.fields.service) : '';
+      return {
+        name, phone, email,
+        service: serviceField || f.service,
+        fields: filled,
+        source: 'abandon-' + f.prefix,
+      };
+    }
+    return null;
+  }
+
+  function fireBeacon(){
+    if(fired) return;
+    if(window.__rrFormSubmitted) return;
+    const data = pickAbandonedForm();
+    if(!data) return;
+    data.pageUrl = location.href;
+    try{
+      const blob = new Blob([JSON.stringify(data)], {type:'application/json'});
+      // sendBeacon returns false if the user agent refused (queue full / size)
+      const ok = navigator.sendBeacon && navigator.sendBeacon(API+'/leads/abandon', blob);
+      if(!ok){
+        // Fallback for browsers that block the beacon — fire-and-forget fetch
+        // with keepalive so it survives unload.
+        fetch(API+'/leads/abandon',{
+          method:'POST',
+          headers:{'Content-Type':'application/json'},
+          body:JSON.stringify(data),
+          keepalive:true,
+        }).catch(()=>{});
+      }
+      fired = true;
+    }catch(e){ /* swallow — never break navigation */ }
+  }
+
+  // Fire on either signal — visibilitychange is more reliable on mobile,
+  // pagehide covers desktop tab-close. Whichever wins first, the `fired`
+  // flag stops the second one.
+  document.addEventListener('visibilitychange',()=>{
+    if(document.visibilityState==='hidden') fireBeacon();
+  });
+  window.addEventListener('pagehide', fireBeacon);
+})();
 
 // ─── RAZORPAY CHECKOUT ───────────────────────────────────────────────────────
 // Triggered by "Buy Now" buttons on package cards. Flow:

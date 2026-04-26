@@ -20,6 +20,7 @@ const {
   verifyCheckoutSignature,
   verifyWebhookSignature,
 } = require('./payments');
+const { notifyAbandonedLead } = require('./notify');
 
 const app = express();
 app.set('trust proxy', 1); // trust ALB + CloudFront
@@ -95,6 +96,9 @@ const submitLimiter = rateLimit({ windowMs: 60 * 1000,      max: 5,  standardHea
 // Public resume upload from the quick-capture form. Tighter than submit because
 // each request streams a file to S3 — keep it cheap and abuse-resistant.
 const leadResumeLimiter = rateLimit({ windowMs: 60 * 1000, max: 3, standardHeaders: true });
+// Abandoned-lead beacon. Browsers may fire it twice (visibilitychange + pagehide),
+// so allow a few hits per minute per IP — the dedupe is in the handler.
+const abandonLimiter = rateLimit({ windowMs: 60 * 1000, max: 6, standardHeaders: true });
 
 app.use(generalLimiter);
 
@@ -151,6 +155,67 @@ app.post('/submit', submitLimiter, async (req, res, next) => {
     };
     const { insertedId } = await getDb().collection('leads').insertOne(lead);
     res.json({ success: true, id: insertedId });
+  } catch (e) { next(e); }
+});
+
+// ───────────────────────────────────────────────────────────────────────────
+// ABANDONED LEAD CAPTURE — fired by navigator.sendBeacon when a visitor fills
+// the lead form (specifically the phone field) but leaves without submitting.
+// Trigger is conservative: phone is required, plus at least one of email/name.
+// We dedupe on phone within the last 24h so multiple beforeunload pings or a
+// later /submit don't pile up — the goal is one row per real abandonment.
+// Fires an email to the admin (fail-soft) so ops can re-target within minutes.
+// ───────────────────────────────────────────────────────────────────────────
+app.post('/leads/abandon', abandonLimiter, async (req, res, next) => {
+  try {
+    // sendBeacon delivers a Blob with type 'application/json'; express.json
+    // already parses it. Body shape: { name, phone, email, service, fields, source }
+    const name    = trim(req.body.name);
+    const phone   = trim(req.body.phone);
+    const email   = trim(req.body.email).toLowerCase();
+    const service = trim(req.body.service) || 'Abandoned';
+    const source  = trim(req.body.source) || 'abandon-beacon';
+    const fields  = Array.isArray(req.body.fields)
+      ? req.body.fields.filter(s => typeof s === 'string').slice(0, 12)
+      : [];
+
+    // Conservative gate — phone must look real, AND we need at least one other
+    // identifier so we can actually reach the lead. Anything weaker is noise.
+    if (!phoneRe.test(phone))                  return res.json({ ok: false, reason: 'no-phone' });
+    if (!name && !emailRe.test(email))         return res.json({ ok: false, reason: 'no-id' });
+
+    const leads = getDb().collection('leads');
+
+    // Dedupe: if this phone already has a lead in the last 24h (in any state),
+    // don't create a second one. Beacon spam, page reloads, or a successful
+    // /submit immediately after should not produce a phantom abandonment row.
+    const since = new Date(Date.now() - 24 * 60 * 60 * 1000);
+    const existing = await leads.findOne(
+      { phone, createdAt: { $gte: since } },
+      { projection: { _id: 1, status: 1 } },
+    );
+    if (existing) return res.json({ ok: true, deduped: true });
+
+    const lead = {
+      name: name || '(unknown)',
+      phone, email,
+      service,
+      fieldsFilled: fields,
+      source,
+      utm:       req.body.utm && typeof req.body.utm === 'object' ? req.body.utm : null,
+      pageUrl:   trim(req.body.pageUrl).slice(0, 500),
+      userAgent: trim(req.headers['user-agent']).slice(0, 300),
+      status:    'Abandoned',
+      createdAt: new Date(),
+    };
+    const { insertedId } = await leads.insertOne(lead);
+
+    // Fire-and-forget admin email. Never block the response on it; if SES is
+    // misconfigured the beacon still succeeds and the lead is in the DB.
+    notifyAbandonedLead({ ...lead, _id: insertedId })
+      .catch(err => console.error('[abandon:notify]', err.message || err));
+
+    res.json({ ok: true, id: insertedId });
   } catch (e) { next(e); }
 });
 
@@ -438,7 +503,7 @@ app.get('/admin/leads/:id', requireAuth('admin'), async (req, res, next) => {
 app.patch('/admin/leads/:id', requireAuth('admin'), async (req, res, next) => {
   try {
     if (!ObjectId.isValid(req.params.id)) return bad(res, 'Invalid id');
-    const allowed = ['New', 'Resume Uploaded', 'In Progress', 'Pending Payment', 'Paid', 'Completed', 'Lost'];
+    const allowed = ['New', 'Resume Uploaded', 'In Progress', 'Pending Payment', 'Paid', 'Completed', 'Lost', 'Abandoned'];
     const status = trim(req.body.status);
     if (!allowed.includes(status)) return bad(res, 'Invalid status');
     await getDb().collection('leads').updateOne(

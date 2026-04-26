@@ -44,6 +44,9 @@ body{background:var(--navy);color:var(--white);font-family:'Plus Jakarta Sans',s
 .stat-card.c-prog::before{background:var(--blue);}
 .stat-card.c-done::before{background:var(--purple);}
 .stat-card.c-paid::before{background:var(--yellow);}
+.stat-card.c-abandon::before{background:#ef4444;}
+.stat-card.clickable{cursor:pointer;transition:transform .12s,border-color .15s;}
+.stat-card.clickable:hover{transform:translateY(-2px);border-color:rgba(232,160,32,.45);}
 .stat-label{font-size:11px;color:var(--muted);font-weight:600;letter-spacing:.3px;margin-bottom:6px;}
 .stat-num{font-family:'Fraunces',serif;font-size:32px;color:var(--white);line-height:1;}
 .stat-icon{position:absolute;right:14px;top:50%;transform:translateY(-50%);font-size:24px;opacity:.25;}
@@ -137,11 +140,12 @@ tr:hover td{background:rgba(255,255,255,.02);}
   <div class="main">
     <!-- STATS -->
     <div class="stats-row">
-      <div class="stat-card c-total"><div class="stat-label">TOTAL LEADS</div><div class="stat-num" id="s-total">0</div><div class="stat-icon">📊</div></div>
-      <div class="stat-card c-new"><div class="stat-label">NEW</div><div class="stat-num" id="s-new">0</div><div class="stat-icon">✨</div></div>
-      <div class="stat-card c-prog"><div class="stat-label">IN PROGRESS</div><div class="stat-num" id="s-prog">0</div><div class="stat-icon">⚙️</div></div>
-      <div class="stat-card c-done"><div class="stat-label">COMPLETED</div><div class="stat-num" id="s-done">0</div><div class="stat-icon">✅</div></div>
-      <div class="stat-card c-paid"><div class="stat-label">PAID</div><div class="stat-num" id="s-paid">0</div><div class="stat-icon">💰</div></div>
+      <div class="stat-card c-total clickable" onclick="filterStatusTo('')" title="Show all"><div class="stat-label">TOTAL LEADS</div><div class="stat-num" id="s-total">0</div><div class="stat-icon">📊</div></div>
+      <div class="stat-card c-new clickable" onclick="filterStatusTo('New')" title="Show New leads"><div class="stat-label">NEW</div><div class="stat-num" id="s-new">0</div><div class="stat-icon">✨</div></div>
+      <div class="stat-card c-abandon clickable" onclick="filterStatusTo('Abandoned')" title="Visitors who filled the form but didn't submit — call them"><div class="stat-label">ABANDONED</div><div class="stat-num" id="s-abandon">0</div><div class="stat-icon">⚠️</div></div>
+      <div class="stat-card c-prog clickable" onclick="filterStatusTo('In Progress')"><div class="stat-label">IN PROGRESS</div><div class="stat-num" id="s-prog">0</div><div class="stat-icon">⚙️</div></div>
+      <div class="stat-card c-done clickable" onclick="filterStatusTo('Completed')"><div class="stat-label">COMPLETED</div><div class="stat-num" id="s-done">0</div><div class="stat-icon">✅</div></div>
+      <div class="stat-card c-paid clickable" onclick="filterStatusTo('Paid')"><div class="stat-label">PAID</div><div class="stat-num" id="s-paid">0</div><div class="stat-icon">💰</div></div>
     </div>
 
     <!-- LEADS -->
@@ -150,7 +154,7 @@ tr:hover td{background:rgba(255,255,255,.02);}
       <input class="search-input" type="text" id="searchInput" placeholder="Search name, email, phone..." oninput="renderTable()"/>
       <select class="filter-sel" id="filterStatus" onchange="renderTable()">
         <option value="">All Status</option>
-        <option>New</option><option>Pending Payment</option><option>In Progress</option><option>Completed</option><option>Paid</option>
+        <option>New</option><option>Abandoned</option><option>Pending Payment</option><option>In Progress</option><option>Completed</option><option>Paid</option>
       </select>
       <button class="refresh-btn" onclick="loadLeads()">↻ Refresh</button>
       <button class="export-btn" onclick="exportCSV('filtered')" title="Export the rows matching your current search + status filter">↓ Export CSV</button>
@@ -298,9 +302,20 @@ async function loadUsers(){
 function updateStats(){
   document.getElementById('s-total').textContent = allLeads.length;
   document.getElementById('s-new').textContent = allLeads.filter(l=>l.status==='New'||l.status==='Resume Uploaded').length;
+  document.getElementById('s-abandon').textContent = allLeads.filter(l=>l.status==='Abandoned').length;
   document.getElementById('s-prog').textContent = allLeads.filter(l=>l.status==='In Progress').length;
   document.getElementById('s-done').textContent = allLeads.filter(l=>l.status==='Completed').length;
   document.getElementById('s-paid').textContent = allLeads.filter(l=>l.status==='Paid').length;
+}
+
+// Click a stat tile to refilter the table — e.g. "Abandoned" → only show
+// abandonment leads so you can call them straight from this view.
+function filterStatusTo(status){
+  const sel=document.getElementById('filterStatus');
+  if(!sel) return;
+  sel.value=status;
+  renderTable();
+  document.querySelector('.toolbar')?.scrollIntoView({behavior:'smooth',block:'start'});
 }
 
 function getSvcClass(svc){
@@ -346,10 +361,13 @@ function renderTable(){
       <td>
         <select class="status-sel" onchange="updateStatus('${l.id}',this.value)">
           <option ${l.status==='New'?'selected':''}>New</option>
+          <option ${l.status==='Abandoned'?'selected':''}>Abandoned</option>
           <option ${l.status==='Resume Uploaded'?'selected':''}>Resume Uploaded</option>
+          <option ${l.status==='Pending Payment'?'selected':''}>Pending Payment</option>
           <option ${l.status==='In Progress'?'selected':''}>In Progress</option>
           <option ${l.status==='Completed'?'selected':''}>Completed</option>
           <option ${l.status==='Paid'?'selected':''}>Paid</option>
+          <option ${l.status==='Lost'?'selected':''}>Lost</option>
         </select>
       </td>
       <td><button class="view-btn" onclick="showDetail('${l.id}')">View →</button></td>

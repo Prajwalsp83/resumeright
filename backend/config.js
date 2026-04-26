@@ -43,6 +43,11 @@ const env = {
   RAZORPAY_KEY_ID:         optional('RAZORPAY_KEY_ID', ''),
   RAZORPAY_KEY_SECRET:     optional('RAZORPAY_KEY_SECRET', ''),
   RAZORPAY_WEBHOOK_SECRET: optional('RAZORPAY_WEBHOOK_SECRET', ''),
+
+  // SES — optional. If missing, abandonment alerts won't email (still logged + saved).
+  // SES_FROM must be verified in SES; SES_TO is who gets the alert (admin inbox).
+  SES_FROM: optional('SES_FROM', ''),
+  SES_TO:   optional('SES_TO', ''),
 };
 
 if (env.JWT_SECRET.length < 32) {
