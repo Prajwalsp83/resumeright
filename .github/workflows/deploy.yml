@@ -460,6 +460,10 @@ jobs:
             --exclude "*" \
             --include "index.html" \
             --include "admin.html" \
+            --include "privacy.html" \
+            --include "terms.html" \
+            --include "refund.html" \
+            --include "contact.html" \
             --include "favicon.svg" \
             --include "assets/*" \
             --delete
