@@ -175,7 +175,11 @@ jobs:
         run: |
           INSTANCE_ID="${{ needs.terraform-apply.outputs.instance_id }}"
           UPLOADS_BUCKET="${{ needs.terraform-apply.outputs.uploads_bucket }}"
-          FRONTEND_URL="${{ needs.terraform-apply.outputs.frontend_url }}"
+          # Custom domain takes precedence; CloudFront URL is fallback.
+          # Backend CORS allowlist includes both new domain (apex + www) and the
+          # CloudFront URL so direct CloudFront access keeps working during cutover.
+          CF_FRONTEND_URL="${{ needs.terraform-apply.outputs.frontend_url }}"
+          FRONTEND_URL="https://resumeright.co.in,https://www.resumeright.co.in,${CF_FRONTEND_URL}"
           REPO_URL="https://github.com/${{ github.repository }}.git"
           COMMIT_SHA="${{ github.sha }}"
 
@@ -425,14 +429,16 @@ jobs:
       - name: Inject API URL into frontend
         working-directory: frontend
         env:
-          API_URL: ${{ needs.terraform-apply.outputs.api_url }}
+          # Custom api domain (resolves via Route 53 → CloudFront → EC2).
+          # Falls back to terraform's CloudFront output if custom domain is unset.
+          API_URL: https://api.resumeright.co.in
         run: |
-          # Single source of truth: terraform's api_url output. We sed-replace
+          # Single source of truth: API_URL above. We sed-replace
           # the __API_URL__ placeholder in the HTML files right before upload,
           # so the committed source never has a hardcoded CloudFront domain.
           # If CloudFront gets recreated, the next deploy auto-heals.
           if [ -z "$API_URL" ]; then
-            echo "::error::api_url output is empty — aborting frontend deploy"
+            echo "::error::API_URL is empty — aborting frontend deploy"
             exit 1
           fi
           echo "Injecting API_URL=$API_URL into HTML files"
