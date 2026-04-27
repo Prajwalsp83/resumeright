@@ -72,6 +72,22 @@ variable "github_repo" {
   default     = ""
 }
 
+# Custom domain wiring for the frontend CloudFront distribution.
+# Both must be set together — leave both empty to keep the default
+# *.cloudfront.net URL with the AWS-managed cert.
+# IMPORTANT: the ACM certificate MUST be issued in us-east-1 — that's a hard
+# CloudFront requirement, regardless of where the rest of the stack lives.
+variable "frontend_domain" {
+  description = "Custom apex/subdomain for the frontend (e.g. resumeright.co.in). Empty = use default CloudFront URL."
+  type        = string
+  default     = ""
+}
+variable "frontend_cert_arn" {
+  description = "ACM certificate ARN in us-east-1 for the frontend custom domain. Required iff frontend_domain is set."
+  type        = string
+  default     = ""
+}
+
 locals {
   tags = {
     Project     = var.app_name
@@ -432,6 +448,12 @@ resource "aws_cloudfront_distribution" "frontend" {
   price_class         = "PriceClass_200"
   tags                = local.tags
 
+  # Custom domain (optional). Both var.frontend_domain and var.frontend_cert_arn
+  # must be set together — passing only one is a misconfiguration. We don't
+  # validate that here because the AWS API will reject it with a clear error
+  # at apply time anyway.
+  aliases = var.frontend_domain == "" ? [] : [var.frontend_domain]
+
   origin {
     domain_name = aws_s3_bucket_website_configuration.frontend.website_endpoint
     origin_id   = "s3-frontend"
@@ -458,7 +480,15 @@ resource "aws_cloudfront_distribution" "frontend" {
     geo_restriction { restriction_type = "none" }
   }
 
-  viewer_certificate { cloudfront_default_certificate = true }
+  # When a custom cert ARN is provided, switch to SNI + TLSv1.2_2021 (modern
+  # default). Otherwise keep the default *.cloudfront.net cert. Terraform
+  # treats this as an in-place update on the existing distribution.
+  viewer_certificate {
+    cloudfront_default_certificate = var.frontend_cert_arn == "" ? true : null
+    acm_certificate_arn            = var.frontend_cert_arn == "" ? null : var.frontend_cert_arn
+    ssl_support_method             = var.frontend_cert_arn == "" ? null : "sni-only"
+    minimum_protocol_version       = var.frontend_cert_arn == "" ? null : "TLSv1.2_2021"
+  }
 }
 
 resource "aws_cloudfront_distribution" "api" {
