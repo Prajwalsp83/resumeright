@@ -303,6 +303,65 @@ body.ub-on .hero{padding-top:156px;}
   .ats-bar-row{grid-template-columns:90px 1fr 32px;font-size:11px;}
 }
 
+/* VIDEO PITCH — record-yourself coaching upsell ─────────────────────────── */
+.vp-section{padding:80px 6vw;background:linear-gradient(135deg,#0F1B30,#0B1628 55%,#0F1B30);position:relative;overflow:hidden;border-top:1px solid var(--border);}
+.vp-section::before{content:"";position:absolute;inset:0;background:radial-gradient(800px 320px at 20% 0%,rgba(232,160,32,.08),transparent 60%),radial-gradient(700px 360px at 90% 100%,rgba(139,92,246,.08),transparent 60%);pointer-events:none;}
+.vp-inner{max-width:1100px;margin:0 auto;display:grid;grid-template-columns:1.05fr 1fr;gap:48px;align-items:center;position:relative;}
+.vp-left h2{font-size:clamp(26px,3.6vw,40px);line-height:1.15;margin:14px 0 16px;}
+.vp-left h2 em{font-style:normal;color:var(--gold);background:linear-gradient(120deg,var(--gold),#F5C153);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
+.vp-left p{color:var(--muted);font-size:15px;margin-bottom:18px;}
+.vp-points{list-style:none;padding:0;margin-bottom:18px;}
+.vp-points li{font-size:14px;padding:7px 0;color:var(--white);}
+.vp-points li::before{content:"●";color:var(--gold);margin-right:10px;font-size:10px;vertical-align:middle;}
+.vp-trustline{font-size:12px;color:var(--muted);}
+
+.vp-card{background:var(--card);border:1px solid var(--border);border-radius:20px;padding:24px 22px;box-shadow:0 24px 60px rgba(0,0,0,.35);}
+.vp-card h3{font-size:20px;margin:0 0 4px;}
+.vp-sub{font-size:13px;color:var(--muted);margin-bottom:16px;}
+.vp-tabs{display:flex;gap:8px;background:var(--navy);border:1px solid var(--border);border-radius:10px;padding:4px;margin-bottom:14px;}
+.vp-tab{flex:1;padding:9px 10px;background:transparent;border:none;color:var(--muted);font-size:13px;font-weight:600;border-radius:8px;cursor:pointer;font-family:'Plus Jakarta Sans',sans-serif;}
+.vp-tab.active{background:var(--gold);color:var(--navy);}
+
+.vp-pane{display:none;}
+.vp-pane.active{display:block;animation:atsFade .3s ease both;}
+
+.vp-preview{position:relative;width:100%;aspect-ratio:16/10;background:#000;border:1px solid var(--border);border-radius:12px;overflow:hidden;display:flex;align-items:center;justify-content:center;color:var(--muted);font-size:13px;margin-bottom:12px;}
+.vp-preview video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;background:#000;}
+.vp-preview .vp-rec-badge{position:absolute;top:12px;left:12px;background:#EF4444;color:#fff;padding:4px 10px;border-radius:50px;font-size:11px;font-weight:700;display:none;align-items:center;gap:6px;letter-spacing:.5px;}
+.vp-preview .vp-rec-badge::before{content:"";width:7px;height:7px;background:#fff;border-radius:50%;animation:pulse 1s infinite;}
+.vp-preview.recording .vp-rec-badge{display:inline-flex;}
+.vp-preview .vp-timer{position:absolute;top:12px;right:12px;background:rgba(0,0,0,.55);color:#fff;padding:4px 10px;border-radius:50px;font-size:12px;font-variant-numeric:tabular-nums;display:none;}
+.vp-preview.recording .vp-timer,.vp-preview.has-clip .vp-timer{display:block;}
+.vp-preview .vp-placeholder{text-align:center;padding:0 24px;}
+.vp-preview .vp-placeholder strong{color:var(--white);display:block;margin-bottom:6px;font-weight:600;}
+
+.vp-controls{display:flex;gap:10px;margin-bottom:14px;}
+.vp-btn{flex:1;padding:11px 14px;border-radius:10px;border:1px solid var(--border);background:var(--navy);color:var(--white);font-size:13px;font-weight:600;cursor:pointer;font-family:'Plus Jakarta Sans',sans-serif;transition:transform .12s,border-color .12s;}
+.vp-btn:hover{border-color:var(--gold);transform:translateY(-1px);}
+.vp-btn:disabled{opacity:.45;cursor:not-allowed;transform:none;}
+.vp-btn.primary{background:var(--gold);color:var(--navy);border-color:var(--gold);}
+.vp-btn.danger{background:#EF4444;color:#fff;border-color:#EF4444;}
+
+.vp-form input,.vp-form textarea,.vp-form select{width:100%;padding:13px 14px;background:var(--navy);border:1px solid var(--border);border-radius:10px;color:var(--white);font-size:14px;margin-bottom:10px;font-family:'Plus Jakarta Sans',sans-serif;}
+.vp-form input:focus,.vp-form textarea:focus,.vp-form select:focus{outline:none;border-color:var(--gold);}
+.vp-form textarea{resize:vertical;min-height:70px;}
+.vp-submit{width:100%;background:var(--gold);color:var(--navy);font-weight:700;padding:13px;border-radius:10px;border:none;cursor:pointer;font-size:15px;margin-top:6px;}
+.vp-submit:disabled{opacity:.6;cursor:not-allowed;}
+.vp-trust{font-size:11px;color:var(--muted);text-align:center;margin-top:10px;}
+.vp-msg{font-size:13px;margin-top:10px;text-align:center;min-height:18px;}
+.vp-msg.success{color:var(--green);}
+.vp-msg.error{color:var(--red);}
+.vp-tips{background:var(--navy);border:1px dashed var(--border);border-radius:10px;padding:12px 14px;font-size:12px;color:var(--muted);line-height:1.55;margin-bottom:14px;}
+.vp-tips strong{color:var(--gold);font-weight:600;}
+
+.vp-file-label{display:flex;align-items:center;gap:10px;padding:12px 14px;background:var(--navy);border:1px dashed var(--border);border-radius:10px;color:var(--muted);font-size:13px;cursor:pointer;margin-bottom:10px;transition:border-color .15s,color .15s;}
+.vp-file-label:hover{border-color:var(--gold);color:var(--white);}
+.vp-file-label.has-file{border-style:solid;border-color:var(--green);color:var(--white);}
+
+@media(max-width:780px){
+  .vp-inner{grid-template-columns:1fr;gap:28px;}
+}
+
 /* PAIN / FOMO SECTION — why they NEED this */
 .pain-section{background:var(--navy2);padding:80px 6vw;}
 .pain-inner{max-width:1000px;margin:0 auto;text-align:center;}
@@ -518,7 +577,7 @@ body{
   <p>75% of resumes are rejected by ATS bots before a human ever sees them. While you're scrolling, someone with a weaker profile just got hired for the role you want — because they knew the system. Fix your resume in 24 hours, or your money back.</p>
   <div class="hero-btns">
     <button class="btn-primary" onclick="document.getElementById('quickCapture').scrollIntoView({behavior:'smooth'})">Get My Free ATS Scan →</button>
-    <button class="btn-outline" onclick="document.getElementById('services').scrollIntoView({behavior:'smooth'})">See Packages</button>
+    <button class="btn-outline" onclick="document.getElementById('videoPitch').scrollIntoView({behavior:'smooth'})">🎥 Get Interview Coaching</button>
   </div>
   <div class="hero-stats">
     <div><span class="stat-num">500+</span><span class="stat-label">Clients placed</span></div>
@@ -548,9 +607,9 @@ body{
       <div class="ats-step active" id="atsStepInput">
         <h3>Run my free scan</h3>
         <div class="qc-sub">Instant results. We never sell your data.</div>
+        <input type="text" id="qc-name"  placeholder="Your name" required>
+        <input type="tel"  id="qc-phone" placeholder="WhatsApp number" required>
         <input type="email" id="qc-email" placeholder="Your email (results sent here)" required>
-        <input type="text" id="qc-name" placeholder="Your name (optional)">
-        <input type="tel" id="qc-phone" placeholder="WhatsApp number (optional)">
         <select id="qc-target">
           <option value="">Target role (optional)</option>
           <option>Software Engineer / Developer</option>
@@ -634,6 +693,86 @@ body{
             </div>
           </div>
         </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- VIDEO PITCH — record yourself, get personal interview coaching -->
+<section class="vp-section" id="videoPitch">
+  <div class="vp-inner">
+    <div class="vp-left">
+      <span class="section-tag" style="color:var(--gold);">PERSONAL · 1-ON-1 · COACH-LED</span>
+      <h2>Record a 60-second pitch. <em>We'll coach you for the interview.</em></h2>
+      <p>An ATS-clean resume gets you the call. The interview decides the offer. Record yourself introducing who you are and what you do — we'll review it 1:1 and turn your weak spots into a calm, confident pitch you can actually deliver.</p>
+      <ul class="vp-points">
+        <li>Body language + tone audit by a real coach (not AI)</li>
+        <li>Personalized "your story" framework — STAR-tuned per role</li>
+        <li>Mock-interview drill with role-specific questions</li>
+        <li>Mental prep — handling nerves, salary talk, "weakness" trap</li>
+      </ul>
+      <div class="vp-trustline">🔒 Your video is private — only the coaching team sees it. Used to prep your session.</div>
+    </div>
+
+    <div class="vp-card">
+      <h3>Send your pitch</h3>
+      <div class="vp-sub">Either record live (camera), or upload an existing clip. Up to 90 seconds.</div>
+
+      <div class="vp-tabs" role="tablist">
+        <button type="button" class="vp-tab active" id="vpTabRecord" onclick="vpSwitch('record')">🎥 Record now</button>
+        <button type="button" class="vp-tab" id="vpTabUpload" onclick="vpSwitch('upload')">📁 Upload clip</button>
+      </div>
+
+      <!-- RECORD PANE -->
+      <div class="vp-pane active" id="vpPaneRecord">
+        <div class="vp-preview" id="vpPreview">
+          <div class="vp-placeholder" id="vpPlaceholder">
+            <strong>Camera off</strong>
+            Tap "Start camera" to begin. Stand against a plain wall, look at the lens, smile.
+          </div>
+          <video id="vpLiveVideo" playsinline muted style="display:none;"></video>
+          <video id="vpPlaybackVideo" playsinline controls style="display:none;"></video>
+          <span class="vp-rec-badge">REC</span>
+          <span class="vp-timer" id="vpTimer">0:00</span>
+        </div>
+        <div class="vp-tips">
+          <strong>30-60s tip:</strong> "Hi, I'm <em>name</em>. I've been a <em>role</em> for <em>X</em> years. I'm best at <em>skill</em>. I'm looking for <em>target role</em> because <em>why</em>."
+        </div>
+        <div class="vp-controls">
+          <button type="button" class="vp-btn" id="vpStartCam" onclick="vpStartCamera()">📷 Start camera</button>
+          <button type="button" class="vp-btn primary" id="vpRecord" onclick="vpToggleRecord()" disabled>● Record</button>
+          <button type="button" class="vp-btn" id="vpRetake" onclick="vpRetake()" disabled>↻ Retake</button>
+        </div>
+      </div>
+
+      <!-- UPLOAD PANE -->
+      <div class="vp-pane" id="vpPaneUpload">
+        <label class="vp-file-label" for="vp-file">
+          <span style="font-size:18px;">🎬</span>
+          <span id="vpFileText">Pick a video file <em style="font-style:normal;color:var(--muted);font-size:11px;display:block;">MP4, WebM, or MOV — up to 50 MB</em></span>
+          <input type="file" id="vp-file" accept="video/mp4,video/webm,video/quicktime,video/*" hidden>
+        </label>
+      </div>
+
+      <!-- SHARED CONTACT FORM -->
+      <div class="vp-form">
+        <input type="text"  id="vp-name"  placeholder="Your name" required>
+        <input type="tel"   id="vp-phone" placeholder="WhatsApp number" required>
+        <input type="email" id="vp-email" placeholder="Email" required>
+        <select id="vp-target">
+          <option value="">Target role (optional)</option>
+          <option>Software Engineer / Developer</option>
+          <option>Data / Analytics</option>
+          <option>DevOps / Cloud / SRE</option>
+          <option>Product Manager</option>
+          <option>Designer (UI/UX)</option>
+          <option>Marketing / Sales</option>
+          <option>Other</option>
+        </select>
+        <textarea id="vp-message" placeholder="Anything we should know? (interview date, role link, weak spots — optional)"></textarea>
+        <button type="button" class="vp-submit" id="vpSubmit" onclick="submitVideoPitch()">Send to coach →</button>
+        <div class="vp-trust">🔒 Stored privately. Coach reaches out within 12 hours on WhatsApp.</div>
+        <div class="vp-msg" id="vpMsg"></div>
       </div>
     </div>
   </div>
@@ -1452,10 +1591,13 @@ async function runAtsScan(){
   const btn=document.getElementById('qcSubmit');
   msg.textContent='';msg.className='qc-msg';
 
-  // Email gate (required), file gate (required)
+  // All three contact fields are required so warm leads can be reached.
   const emailRe=/^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  const phoneRe=/^[0-9+\s\-()]{7,20}$/;
+  if(!name)              {msg.textContent='Please enter your name.';msg.className='qc-msg error';return;}
+  if(!phoneRe.test(phone)){msg.textContent='Please enter a valid WhatsApp number.';msg.className='qc-msg error';return;}
   if(!emailRe.test(email)){msg.textContent='Please enter a valid email.';msg.className='qc-msg error';return;}
-  if(!file){msg.textContent='Please attach your resume PDF.';msg.className='qc-msg error';return;}
+  if(!file)              {msg.textContent='Please attach your resume PDF.';msg.className='qc-msg error';return;}
 
   btn.disabled=true;
   // Start scanning UI
@@ -1627,6 +1769,224 @@ function resetAtsScan(){
   const msg=document.getElementById('qcMsg');if(msg){msg.textContent='';msg.className='qc-msg';}
   setAtsStep('atsStepInput');
   document.getElementById('quickCapture').scrollIntoView({behavior:'smooth'});
+}
+
+// ─── VIDEO PITCH RECORDER ───────────────────────────────────────────────────
+// Two modes: live record (MediaRecorder API) or pre-recorded upload.
+// Stores result as Blob in window.__vpClip until submit. Cap at 90s recording
+// to keep S3 spend predictable and force a tight pitch.
+//
+// MediaRecorder browser support: Chrome / Edge / Firefox / Safari 14.1+.
+// On unsupported browsers we hide the record tab and force upload mode.
+const VP_MAX_SECONDS = 90;
+let __vpStream = null;
+let __vpRecorder = null;
+let __vpChunks = [];
+let __vpClip = null;       // Blob — what gets uploaded
+let __vpClipName = '';
+let __vpTimerInt = null;
+let __vpStartTs = 0;
+
+function vpSwitch(mode){
+  document.getElementById('vpTabRecord').classList.toggle('active', mode==='record');
+  document.getElementById('vpTabUpload').classList.toggle('active', mode==='upload');
+  document.getElementById('vpPaneRecord').classList.toggle('active', mode==='record');
+  document.getElementById('vpPaneUpload').classList.toggle('active', mode==='upload');
+}
+
+function vpFormatTime(s){
+  const mm=Math.floor(s/60), ss=s%60;
+  return mm+':'+(ss<10?'0':'')+ss;
+}
+
+async function vpStartCamera(){
+  const msg=document.getElementById('vpMsg');msg.textContent='';msg.className='vp-msg';
+  if(!navigator.mediaDevices||!window.MediaRecorder){
+    msg.textContent='Recording not supported on this browser. Please use the Upload tab.';
+    msg.className='vp-msg error';
+    vpSwitch('upload');
+    return;
+  }
+  try{
+    __vpStream=await navigator.mediaDevices.getUserMedia({
+      video:{width:{ideal:1280},height:{ideal:720},facingMode:'user'},
+      audio:true,
+    });
+    const liveEl=document.getElementById('vpLiveVideo');
+    const ph=document.getElementById('vpPlaceholder');
+    const playback=document.getElementById('vpPlaybackVideo');
+    liveEl.srcObject=__vpStream;
+    liveEl.muted=true;
+    liveEl.style.display='block';
+    playback.style.display='none';
+    ph.style.display='none';
+    await liveEl.play().catch(()=>{});
+    document.getElementById('vpStartCam').disabled=true;
+    document.getElementById('vpStartCam').textContent='✓ Camera on';
+    document.getElementById('vpRecord').disabled=false;
+  }catch(e){
+    msg.textContent='Camera access denied. Allow camera + mic in browser settings, or use Upload.';
+    msg.className='vp-msg error';
+  }
+}
+
+function vpToggleRecord(){
+  if(!__vpRecorder || __vpRecorder.state==='inactive'){
+    vpStartRecord();
+  }else{
+    vpStopRecord();
+  }
+}
+
+function vpStartRecord(){
+  if(!__vpStream)return;
+  __vpChunks=[];
+  // Pick first supported mimeType — Safari sometimes only gets video/mp4
+  const candidates=['video/webm;codecs=vp9,opus','video/webm;codecs=vp8,opus','video/webm','video/mp4'];
+  const mime=candidates.find(m=>window.MediaRecorder.isTypeSupported && window.MediaRecorder.isTypeSupported(m)) || '';
+  try{
+    __vpRecorder = mime ? new MediaRecorder(__vpStream,{mimeType:mime}) : new MediaRecorder(__vpStream);
+  }catch(e){
+    document.getElementById('vpMsg').textContent='Could not start recorder: '+e.message;
+    document.getElementById('vpMsg').className='vp-msg error';
+    return;
+  }
+  __vpRecorder.ondataavailable=ev=>{ if(ev.data && ev.data.size>0) __vpChunks.push(ev.data); };
+  __vpRecorder.onstop=()=>{
+    const ext=(__vpRecorder.mimeType||'video/webm').includes('mp4')?'mp4':'webm';
+    __vpClip=new Blob(__vpChunks,{type:__vpRecorder.mimeType||'video/webm'});
+    __vpClipName='pitch-'+Date.now()+'.'+ext;
+    // Show playback
+    const liveEl=document.getElementById('vpLiveVideo');
+    const playback=document.getElementById('vpPlaybackVideo');
+    liveEl.style.display='none';
+    playback.src=URL.createObjectURL(__vpClip);
+    playback.style.display='block';
+    playback.muted=false;
+    document.getElementById('vpPreview').classList.add('has-clip');
+    document.getElementById('vpPreview').classList.remove('recording');
+    document.getElementById('vpRecord').textContent='● Record';
+    document.getElementById('vpRecord').classList.remove('danger');
+    document.getElementById('vpRecord').classList.add('primary');
+    document.getElementById('vpRetake').disabled=false;
+  };
+  __vpRecorder.start(250);
+  __vpStartTs=Date.now();
+  document.getElementById('vpPreview').classList.add('recording');
+  document.getElementById('vpPreview').classList.remove('has-clip');
+  document.getElementById('vpRecord').textContent='■ Stop';
+  document.getElementById('vpRecord').classList.remove('primary');
+  document.getElementById('vpRecord').classList.add('danger');
+  __vpTimerInt=setInterval(()=>{
+    const s=Math.floor((Date.now()-__vpStartTs)/1000);
+    document.getElementById('vpTimer').textContent=vpFormatTime(s)+' / '+vpFormatTime(VP_MAX_SECONDS);
+    if(s>=VP_MAX_SECONDS) vpStopRecord();
+  },200);
+}
+
+function vpStopRecord(){
+  if(__vpRecorder && __vpRecorder.state==='recording'){
+    __vpRecorder.stop();
+  }
+  if(__vpTimerInt){clearInterval(__vpTimerInt);__vpTimerInt=null;}
+}
+
+function vpRetake(){
+  __vpClip=null;__vpClipName='';
+  const playback=document.getElementById('vpPlaybackVideo');
+  const liveEl=document.getElementById('vpLiveVideo');
+  if(playback.src){URL.revokeObjectURL(playback.src);playback.removeAttribute('src');playback.load();}
+  playback.style.display='none';
+  liveEl.style.display='block';
+  document.getElementById('vpPreview').classList.remove('has-clip');
+  document.getElementById('vpRetake').disabled=true;
+  document.getElementById('vpTimer').textContent='0:00';
+}
+
+document.addEventListener('DOMContentLoaded',()=>{
+  // Hide record tab on browsers without MediaRecorder
+  if(!window.MediaRecorder || !navigator.mediaDevices){
+    const rec=document.getElementById('vpTabRecord');
+    if(rec){rec.style.display='none';vpSwitch('upload');}
+  }
+  // File picker for upload mode
+  const fi=document.getElementById('vp-file');
+  const lbl=document.querySelector('.vp-file-label');
+  const txt=document.getElementById('vpFileText');
+  if(fi&&lbl&&txt){
+    fi.addEventListener('change',()=>{
+      const f=fi.files&&fi.files[0];
+      if(f){
+        if(f.size>50*1024*1024){
+          txt.innerHTML='⚠ File too large (max 50 MB) <em style="font-style:normal;color:var(--muted);font-size:11px;display:block;">Trim or compress and try again.</em>';
+          lbl.classList.remove('has-file');fi.value='';__vpClip=null;__vpClipName='';return;
+        }
+        __vpClip=f;__vpClipName=f.name;
+        txt.innerHTML='✓ '+f.name+' <em style="font-style:normal;color:var(--muted);font-size:11px;display:block;">('+(f.size/1024/1024).toFixed(1)+' MB — ready to send)</em>';
+        lbl.classList.add('has-file');
+      }
+    });
+    lbl.addEventListener('dragover',e=>{e.preventDefault();lbl.style.borderColor='var(--gold)';});
+    lbl.addEventListener('dragleave',()=>{lbl.style.borderColor='';});
+    lbl.addEventListener('drop',e=>{
+      e.preventDefault();lbl.style.borderColor='';
+      const dt=e.dataTransfer;
+      if(dt&&dt.files&&dt.files[0]){fi.files=dt.files;fi.dispatchEvent(new Event('change'));}
+    });
+  }
+});
+
+async function submitVideoPitch(){
+  const name=document.getElementById('vp-name').value.trim();
+  const phone=document.getElementById('vp-phone').value.trim();
+  const email=document.getElementById('vp-email').value.trim();
+  const role =document.getElementById('vp-target').value;
+  const note =document.getElementById('vp-message').value.trim();
+  const msg=document.getElementById('vpMsg');
+  const btn=document.getElementById('vpSubmit');
+  msg.textContent='';msg.className='vp-msg';
+
+  const emailRe=/^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  const phoneRe=/^[0-9+\s\-()]{7,20}$/;
+  if(!name)              {msg.textContent='Please enter your name.';msg.className='vp-msg error';return;}
+  if(!phoneRe.test(phone)){msg.textContent='Please enter a valid WhatsApp number.';msg.className='vp-msg error';return;}
+  if(!emailRe.test(email)){msg.textContent='Please enter a valid email.';msg.className='vp-msg error';return;}
+  if(!__vpClip)          {msg.textContent='Please record or upload a video first.';msg.className='vp-msg error';return;}
+
+  btn.disabled=true;btn.textContent='Uploading...';
+  try{
+    const fd=new FormData();
+    // Use a File so the backend gets a proper filename + mime
+    const file=(__vpClip instanceof File)
+      ? __vpClip
+      : new File([__vpClip], __vpClipName||'pitch.webm', {type:__vpClip.type||'video/webm'});
+    fd.append('video',file);
+    fd.append('name',name);
+    fd.append('phone',phone);
+    fd.append('email',email);
+    if(role) fd.append('targetRole',role);
+    if(note) fd.append('message',note);
+    try{ if(window.__rrUTM) fd.append('utm', JSON.stringify(window.__rrUTM)); }catch(_e){}
+
+    const r=await fetch(API+'/tools/video-pitch',{method:'POST',body:fd});
+    const d=await r.json().catch(()=>({}));
+    if(!r.ok)throw new Error(d.error||('HTTP '+r.status));
+
+    window.__rrFormSubmitted=true;
+    try{ if(window.gtag) window.gtag('event','video_pitch_submit'); }catch(_e){}
+    try{ if(window.clarity) window.clarity('event','video_pitch_submit'); }catch(_e){}
+
+    msg.textContent='✓ Got it! Coach will WhatsApp you within 12 hours to schedule your prep session.';
+    msg.className='vp-msg success';
+    btn.textContent='Sent ✓';
+
+    // Stop camera if still on
+    if(__vpStream){try{__vpStream.getTracks().forEach(t=>t.stop());}catch(_e){}__vpStream=null;}
+  }catch(e){
+    msg.textContent='Could not send: '+e.message;
+    msg.className='vp-msg error';
+    btn.disabled=false;btn.textContent='Send to coach →';
+  }
 }
 
 // ─── ABANDONED LEAD CAPTURE ─────────────────────────────────────────────────

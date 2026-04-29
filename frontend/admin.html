@@ -81,6 +81,8 @@ tr:hover td{background:rgba(255,255,255,.02);}
 .svc-naukri{background:rgba(34,197,94,.12);color:#4ade80;}
 .svc-linkedin{background:rgba(139,92,246,.12);color:#a78bfa;}
 .svc-bundle{background:rgba(232,160,32,.12);color:var(--gold2);}
+.svc-video{background:rgba(244,114,182,.12);color:#f472b6;}
+.svc-ats{background:rgba(232,160,32,.12);color:var(--gold);}
 .svc-upload{background:rgba(148,163,184,.12);color:var(--muted);}
 .status-sel{background:rgba(255,255,255,.05);border:1px solid var(--border);border-radius:8px;padding:5px 8px;color:var(--white);font-family:'Plus Jakarta Sans',sans-serif;font-size:12px;outline:none;cursor:pointer;}
 .status-sel option{background:var(--navy2);}
@@ -156,7 +158,7 @@ tr:hover td{background:rgba(255,255,255,.02);}
       <input class="search-input" type="text" id="searchInput" placeholder="Search name, email, phone..." oninput="renderTable()"/>
       <select class="filter-sel" id="filterStatus" onchange="renderTable()">
         <option value="">All Status</option>
-        <option>New</option><option>Abandoned</option><option>ATS Scanned</option><option>Pending Payment</option><option>In Progress</option><option>Completed</option><option>Paid</option>
+        <option>New</option><option>Abandoned</option><option>ATS Scanned</option><option>Video Submitted</option><option>Pending Payment</option><option>In Progress</option><option>Completed</option><option>Paid</option>
       </select>
       <button class="refresh-btn" onclick="loadLeads()">↻ Refresh</button>
       <button class="export-btn" onclick="exportCSV('filtered')" title="Export the rows matching your current search + status filter">↓ Export CSV</button>
@@ -326,6 +328,8 @@ function filterStatusTo(status){
 function getSvcClass(svc){
   if(!svc) return 'svc-upload';
   const s = svc.toLowerCase();
+  if(s.includes('video') || s.includes('coaching') || s.includes('interview')) return 'svc-video';
+  if(s.includes('ats')) return 'svc-ats';
   if(s.includes('naukri')) return 'svc-naukri';
   if(s.includes('linkedin')) return 'svc-linkedin';
   if(s.includes('bundle')) return 'svc-bundle';
@@ -372,6 +376,7 @@ function renderTable(){
           <option ${l.status==='Abandoned'?'selected':''}>Abandoned</option>
           <option ${l.status==='Resume Uploaded'?'selected':''}>Resume Uploaded</option>
           <option ${l.status==='ATS Scanned'?'selected':''}>ATS Scanned</option>
+          <option ${l.status==='Video Submitted'?'selected':''}>Video Submitted</option>
           <option ${l.status==='Pending Payment'?'selected':''}>Pending Payment</option>
           <option ${l.status==='In Progress'?'selected':''}>In Progress</option>
           <option ${l.status==='Completed'?'selected':''}>Completed</option>
@@ -541,7 +546,7 @@ async function showDetail(id){
     atsRow.style.display = 'none';
   }
 
-  // Resume file link — fetched on demand because the signed URL is short-lived
+  // Resume / video file — fetched on demand because the signed URL is short-lived
   // (10min TTL) and only the /admin/leads/:id endpoint returns it. This keeps
   // the list endpoint cheap (no presign calls per row) and links always fresh.
   const resumeDiv = document.getElementById('dm-resume');
@@ -552,9 +557,18 @@ async function showDetail(id){
       const d = await r.json();
       const url = d.lead && d.lead.fileUrl;
       if(url){
-        resumeDiv.innerHTML = `<a href="${url}" target="_blank" rel="noopener">📄 ${l.originalName||'View Resume'} ↗</a>`;
+        const isVideo = /^video\//i.test(l.mimeType||'') || /\.(mp4|webm|mov|m4v|ogg)$/i.test(l.originalName||'');
+        if(isVideo){
+          resumeDiv.innerHTML = `
+            <video controls style="width:100%;max-width:420px;border-radius:10px;background:#000;margin-top:6px;" preload="metadata">
+              <source src="${url}" type="${l.mimeType||'video/mp4'}">
+            </video>
+            <div style="margin-top:6px;"><a href="${url}" target="_blank" rel="noopener" download="${l.originalName||'pitch.mp4'}">⬇ Download original (${l.originalName||'video'})</a></div>`;
+        } else {
+          resumeDiv.innerHTML = `<a href="${url}" target="_blank" rel="noopener">📄 ${l.originalName||'View Resume'} ↗</a> · <a href="${url}" download="${l.originalName||'resume.pdf'}" style="color:var(--gold);">⬇ Download</a>`;
+        }
       } else {
-        resumeDiv.textContent = l.originalName ? `${l.originalName} (file not available)` : '—';
+        resumeDiv.textContent = l.originalName ? `${l.originalName} (file not available — re-upload required)` : '—';
       }
     }catch(e){
       resumeDiv.textContent = 'Failed to load link';

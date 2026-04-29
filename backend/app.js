@@ -13,7 +13,13 @@ const {
   signToken,
   requireAuth,
 } = require('./auth');
-const { s3Enabled, buildUploader, signedUrlForKey } = require('./s3');
+const {
+  s3Enabled,
+  buildUploader,
+  buildVideoUploader,
+  putBufferToS3,
+  signedUrlForKey,
+} = require('./s3');
 const {
   razorpayEnabled,
   createOrder: createRzpOrder,
@@ -392,9 +398,11 @@ app.post('/tools/ats-score', atsLimiter, (req, res, next) => {
       const targetRole     = trim(req.body.targetRole).slice(0, 200);
       const jobDescription = trim(req.body.jobDescription).slice(0, 6000);
 
-      // Email gate — required upfront. This is the lead magnet contract.
-      if (!emailRe.test(email)) return bad(res, 'Valid email is required');
-      if (phone && !phoneRe.test(phone)) return bad(res, 'Phone number looks invalid');
+      // Required fields — name + phone + email all needed so warm leads are
+      // actually contactable. Without phone the conversion follow-up is dead.
+      if (!name)                         return bad(res, 'Your name is required');
+      if (!emailRe.test(email))          return bad(res, 'Valid email is required');
+      if (!phoneRe.test(phone))          return bad(res, 'Valid phone number is required');
 
       // Extract text. pdf-parse occasionally throws on weird PDFs — catch and
       // surface a friendly message instead of a 500.
@@ -409,14 +417,21 @@ app.post('/tools/ats-score', atsLimiter, (req, res, next) => {
 
       const result = scoreResume({ text, jobDescription });
 
-      // Persist as a lead so admin/sales can follow up. Note: we do NOT
-      // upload the PDF to S3 here — that costs money for a free tool and
-      // the score is the deliverable. If they convert we can request the
-      // PDF again at the paid step.
+      // Persist the PDF to S3 so admin can review / forward to writers when
+      // converting this lead to paid. Fail-soft — if S3 upload errors, the
+      // score still ships back and the lead row is still created (just
+      // without an s3Key).
+      const uploaded = await putBufferToS3({
+        buffer:       req.file.buffer,
+        originalName: req.file.originalname,
+        contentType:  req.file.mimetype || 'application/pdf',
+        prefix:       'ats-scans',
+      });
+
       const leadDoc = {
-        name:         name || '(ATS scan)',
+        name,
         email,
-        phone:        phone || '',
+        phone,
         service:      'Free ATS Scan',
         targetRole,
         atsScore:     result.score,
@@ -427,7 +442,10 @@ app.post('/tools/ats-score', atsLimiter, (req, res, next) => {
         hadJD:        Boolean(jobDescription),
         keywordMatch: result.keywordMatch || null,
         originalName: req.file.originalname,
+        s3Key:        uploaded ? uploaded.key    : null,
+        s3Bucket:     uploaded ? uploaded.bucket : null,
         sizeBytes:    req.file.size,
+        mimeType:     req.file.mimetype || 'application/pdf',
         utm:          req.body.utm && typeof req.body.utm === 'string'
                         ? safeJsonParse(req.body.utm) : null,
         status:       'ATS Scanned',
@@ -454,6 +472,55 @@ app.post('/tools/ats-score', atsLimiter, (req, res, next) => {
 function safeJsonParse(s) {
   try { return JSON.parse(s); } catch { return null; }
 }
+
+// ═══════════════════════════════════════════════════════════════════════════
+// VIDEO PITCH — record-yourself coaching lead magnet
+// User records a 30–90s self-introduction (browser MediaRecorder OR file
+// upload). We persist to S3 and create a lead so coaches can review the
+// clip + book a 1:1 interview-prep session. Status = 'Video Submitted'.
+// ═══════════════════════════════════════════════════════════════════════════
+const videoUploader = buildVideoUploader();
+const videoLimiter  = rateLimit({ windowMs: 60 * 1000, max: 3, standardHeaders: true });
+
+app.post('/tools/video-pitch', videoLimiter, (req, res, next) => {
+  videoUploader.single('video')(req, res, async err => {
+    if (err) return bad(res, err.message);
+    if (!req.file) return bad(res, 'Please attach or record a video');
+
+    try {
+      const email      = trim(req.body.email).toLowerCase();
+      const name       = trim(req.body.name);
+      const phone      = trim(req.body.phone);
+      const targetRole = trim(req.body.targetRole).slice(0, 200);
+      const message    = trim(req.body.message).slice(0, 1000);
+
+      if (!name)                 return bad(res, 'Your name is required');
+      if (!emailRe.test(email))  return bad(res, 'Valid email is required');
+      if (!phoneRe.test(phone))  return bad(res, 'Valid phone number is required');
+
+      const f = req.file;
+      const lead = {
+        name, email, phone,
+        service:      'Interview Coaching · Video Pitch',
+        targetRole,
+        message,
+        originalName: f.originalname,
+        s3Key:        s3Enabled ? f.key    : null,
+        s3Bucket:     s3Enabled ? f.bucket : null,
+        localPath:    s3Enabled ? null     : f.filename,
+        sizeBytes:    f.size,
+        mimeType:     f.mimetype || 'video/mp4',
+        status:       'Video Submitted',
+        source:       'video-pitch-tool',
+        utm:          req.body.utm && typeof req.body.utm === 'string'
+                        ? safeJsonParse(req.body.utm) : null,
+        createdAt:    new Date(),
+      };
+      const { insertedId } = await getDb().collection('leads').insertOne(lead);
+      res.json({ success: true, id: insertedId });
+    } catch (e) { next(e); }
+  });
+});
 
 // ═══════════════════════════════════════════════════════════════════════════
 // PAYMENTS — Razorpay
@@ -606,7 +673,7 @@ app.get('/admin/leads/:id', requireAuth('admin'), async (req, res, next) => {
 app.patch('/admin/leads/:id', requireAuth('admin'), async (req, res, next) => {
   try {
     if (!ObjectId.isValid(req.params.id)) return bad(res, 'Invalid id');
-    const allowed = ['New', 'Resume Uploaded', 'ATS Scanned', 'In Progress', 'Pending Payment', 'Paid', 'Completed', 'Lost', 'Abandoned'];
+    const allowed = ['New', 'Resume Uploaded', 'ATS Scanned', 'Video Submitted', 'In Progress', 'Pending Payment', 'Paid', 'Completed', 'Lost', 'Abandoned'];
     const status = trim(req.body.status);
     if (!allowed.includes(status)) return bad(res, 'Invalid status');
     await getDb().collection('leads').updateOne(
