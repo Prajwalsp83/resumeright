@@ -102,6 +102,8 @@ jobs:
             -var="github_repo=https://github.com/${{ github.repository }}.git" \
             -var="frontend_domain=${{ secrets.FRONTEND_DOMAIN }}" \
             -var="frontend_cert_arn=${{ secrets.FRONTEND_CERT_ARN }}" \
+            -var="api_domain=${{ secrets.API_DOMAIN }}" \
+            -var="api_cert_arn=${{ secrets.API_CERT_ARN }}" \
             -out=tfplan
         working-directory: ${{ env.TF_DIR }}
 
@@ -431,18 +433,22 @@ jobs:
       - name: Inject API URL into frontend
         working-directory: frontend
         env:
-          # Custom api domain (resolves via Route 53 → CloudFront → EC2).
-          # Falls back to terraform's CloudFront output if custom domain is unset.
-          API_URL: https://api.resumeright.co.in
+          # API_URL is taken from the API_URL secret if set (e.g.
+          # "https://api.resumeright.co.in" once the api subdomain is wired
+          # in Route 53 + CloudFront aliases). Otherwise we fall back to
+          # terraform's api_url output, which is the stable
+          # *.cloudfront.net URL — works as long as the API distribution
+          # exists. Never hardcode a custom subdomain here without first
+          # confirming it actually resolves; that broke prod once already.
+          API_URL_SECRET: ${{ secrets.API_URL }}
+          API_URL_FALLBACK: ${{ needs.terraform-apply.outputs.api_url }}
         run: |
-          # Single source of truth: API_URL above. We sed-replace
-          # the __API_URL__ placeholder in the HTML files right before upload,
-          # so the committed source never has a hardcoded CloudFront domain.
-          # If CloudFront gets recreated, the next deploy auto-heals.
+          API_URL="${API_URL_SECRET:-$API_URL_FALLBACK}"
           if [ -z "$API_URL" ]; then
             echo "::error::API_URL is empty — aborting frontend deploy"
             exit 1
           fi
+          echo "Using API_URL=$API_URL"
           echo "Injecting API_URL=$API_URL into HTML files"
           # -i'' works on both GNU sed (Ubuntu) and BSD sed; using | as delimiter
           # avoids escaping slashes in the URL.

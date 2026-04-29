@@ -88,6 +88,21 @@ variable "frontend_cert_arn" {
   default     = ""
 }
 
+# Custom domain wiring for the API CloudFront distribution. Same rules as
+# frontend: cert must be in us-east-1, Route 53 record is added separately.
+# The frontend_cert_arn cert can be reused here if its SAN list covers the
+# api subdomain (ours covers all three: apex, www, api).
+variable "api_domain" {
+  description = "Custom subdomain for the API (e.g. api.resumeright.co.in). Empty = use default CloudFront URL."
+  type        = string
+  default     = ""
+}
+variable "api_cert_arn" {
+  description = "ACM certificate ARN in us-east-1 for the API custom domain. Required iff api_domain is set."
+  type        = string
+  default     = ""
+}
+
 locals {
   tags = {
     Project     = var.app_name
@@ -496,6 +511,10 @@ resource "aws_cloudfront_distribution" "api" {
   price_class = "PriceClass_200"
   tags        = local.tags
 
+  # Custom domain (optional). Pair with api_cert_arn — both empty = default
+  # *.cloudfront.net URL with AWS-managed cert; both set = custom subdomain.
+  aliases = var.api_domain == "" ? [] : [var.api_domain]
+
   # Origin = EIP's stable public DNS name. That hostname resolves to the same
   # IP forever (EIP is static), so CloudFront keeps working across EC2
   # replacements as long as the EIP stays associated.
@@ -528,7 +547,12 @@ resource "aws_cloudfront_distribution" "api" {
     geo_restriction { restriction_type = "none" }
   }
 
-  viewer_certificate { cloudfront_default_certificate = true }
+  viewer_certificate {
+    cloudfront_default_certificate = var.api_cert_arn == "" ? true : null
+    acm_certificate_arn            = var.api_cert_arn == "" ? null : var.api_cert_arn
+    ssl_support_method             = var.api_cert_arn == "" ? null : "sni-only"
+    minimum_protocol_version       = var.api_cert_arn == "" ? null : "TLSv1.2_2021"
+  }
 }
 
 ###############################################################################
