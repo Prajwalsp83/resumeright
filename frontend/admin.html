@@ -45,6 +45,7 @@ body{background:var(--navy);color:var(--white);font-family:'Plus Jakarta Sans',s
 .stat-card.c-done::before{background:var(--purple);}
 .stat-card.c-paid::before{background:var(--yellow);}
 .stat-card.c-abandon::before{background:#ef4444;}
+.stat-card.c-ats::before{background:linear-gradient(90deg,var(--gold),#F5C153);}
 .stat-card.clickable{cursor:pointer;transition:transform .12s,border-color .15s;}
 .stat-card.clickable:hover{transform:translateY(-2px);border-color:rgba(232,160,32,.45);}
 .stat-label{font-size:11px;color:var(--muted);font-weight:600;letter-spacing:.3px;margin-bottom:6px;}
@@ -143,6 +144,7 @@ tr:hover td{background:rgba(255,255,255,.02);}
       <div class="stat-card c-total clickable" onclick="filterStatusTo('')" title="Show all"><div class="stat-label">TOTAL LEADS</div><div class="stat-num" id="s-total">0</div><div class="stat-icon">📊</div></div>
       <div class="stat-card c-new clickable" onclick="filterStatusTo('New')" title="Show New leads"><div class="stat-label">NEW</div><div class="stat-num" id="s-new">0</div><div class="stat-icon">✨</div></div>
       <div class="stat-card c-abandon clickable" onclick="filterStatusTo('Abandoned')" title="Visitors who filled the form but didn't submit — call them"><div class="stat-label">ABANDONED</div><div class="stat-num" id="s-abandon">0</div><div class="stat-icon">⚠️</div></div>
+      <div class="stat-card c-ats clickable" onclick="filterStatusTo('ATS Scanned')" title="Free ATS scans — warm leads with a real score in the system"><div class="stat-label">ATS SCANS</div><div class="stat-num" id="s-ats">0</div><div class="stat-icon">📋</div></div>
       <div class="stat-card c-prog clickable" onclick="filterStatusTo('In Progress')"><div class="stat-label">IN PROGRESS</div><div class="stat-num" id="s-prog">0</div><div class="stat-icon">⚙️</div></div>
       <div class="stat-card c-done clickable" onclick="filterStatusTo('Completed')"><div class="stat-label">COMPLETED</div><div class="stat-num" id="s-done">0</div><div class="stat-icon">✅</div></div>
       <div class="stat-card c-paid clickable" onclick="filterStatusTo('Paid')"><div class="stat-label">PAID</div><div class="stat-num" id="s-paid">0</div><div class="stat-icon">💰</div></div>
@@ -154,7 +156,7 @@ tr:hover td{background:rgba(255,255,255,.02);}
       <input class="search-input" type="text" id="searchInput" placeholder="Search name, email, phone..." oninput="renderTable()"/>
       <select class="filter-sel" id="filterStatus" onchange="renderTable()">
         <option value="">All Status</option>
-        <option>New</option><option>Abandoned</option><option>Pending Payment</option><option>In Progress</option><option>Completed</option><option>Paid</option>
+        <option>New</option><option>Abandoned</option><option>ATS Scanned</option><option>Pending Payment</option><option>In Progress</option><option>Completed</option><option>Paid</option>
       </select>
       <button class="refresh-btn" onclick="loadLeads()">↻ Refresh</button>
       <button class="export-btn" onclick="exportCSV('filtered')" title="Export the rows matching your current search + status filter">↓ Export CSV</button>
@@ -195,6 +197,7 @@ tr:hover td{background:rgba(255,255,255,.02);}
     <div class="drow"><div class="dlabel">Target Role</div><div class="dval" id="dm-target">—</div></div>
     <div class="drow"><div class="dlabel">Message</div><div class="dval" id="dm-msg">—</div></div>
     <div class="drow"><div class="dlabel">Resume File</div><div class="dval" id="dm-resume">—</div></div>
+    <div class="drow" id="dm-ats-row" style="display:none;"><div class="dlabel">ATS Score</div><div class="dval" id="dm-ats">—</div></div>
     <div class="drow"><div class="dlabel">Status</div><div class="dval" id="dm-status">—</div></div>
     <div class="drow"><div class="dlabel">Submitted</div><div class="dval" id="dm-date">—</div></div>
     <div class="modal-actions">
@@ -303,6 +306,8 @@ function updateStats(){
   document.getElementById('s-total').textContent = allLeads.length;
   document.getElementById('s-new').textContent = allLeads.filter(l=>l.status==='New'||l.status==='Resume Uploaded').length;
   document.getElementById('s-abandon').textContent = allLeads.filter(l=>l.status==='Abandoned').length;
+  const atsEl = document.getElementById('s-ats');
+  if (atsEl) atsEl.textContent = allLeads.filter(l=>l.status==='ATS Scanned').length;
   document.getElementById('s-prog').textContent = allLeads.filter(l=>l.status==='In Progress').length;
   document.getElementById('s-done').textContent = allLeads.filter(l=>l.status==='Completed').length;
   document.getElementById('s-paid').textContent = allLeads.filter(l=>l.status==='Paid').length;
@@ -355,7 +360,10 @@ function renderTable(){
         <div class="lead-name">${l.name||'—'}</div>
         <div class="lead-sub">${l.email||''} ${l.phone?'· '+l.phone:''}</div>
       </td>
-      <td><span class="svc-badge ${getSvcClass(svcLabel(l))}">${svcLabel(l).replace(' — ₹',' ₹').substring(0,28)}</span></td>
+      <td>
+        <span class="svc-badge ${getSvcClass(svcLabel(l))}">${svcLabel(l).replace(' — ₹',' ₹').substring(0,28)}</span>
+        ${typeof l.atsScore==='number'?`<div style="font-size:11px;color:var(--muted);margin-top:4px;">Score <strong style="color:${l.atsScore>=80?'#10B981':l.atsScore>=60?'#E8A020':'#EF4444'};">${l.atsScore}</strong> · ${l.atsGrade||'–'}</div>`:''}
+      </td>
       <td style="font-size:13px;color:var(--muted)">${targetLabel(l)}</td>
       <td class="date-cell">${fmtDate(l.createdAt||l.submitted||l.uploadedAt)}</td>
       <td>
@@ -363,6 +371,7 @@ function renderTable(){
           <option ${l.status==='New'?'selected':''}>New</option>
           <option ${l.status==='Abandoned'?'selected':''}>Abandoned</option>
           <option ${l.status==='Resume Uploaded'?'selected':''}>Resume Uploaded</option>
+          <option ${l.status==='ATS Scanned'?'selected':''}>ATS Scanned</option>
           <option ${l.status==='Pending Payment'?'selected':''}>Pending Payment</option>
           <option ${l.status==='In Progress'?'selected':''}>In Progress</option>
           <option ${l.status==='Completed'?'selected':''}>Completed</option>
@@ -517,6 +526,20 @@ async function showDetail(id){
   document.getElementById('dm-msg').textContent = l.message || '—';
   document.getElementById('dm-status').textContent = l.status || 'New';
   document.getElementById('dm-date').textContent = fmtDate(l.createdAt||l.submitted||l.uploadedAt);
+
+  // ATS scan summary (only shown for free-scan leads)
+  const atsRow = document.getElementById('dm-ats-row');
+  const atsCell = document.getElementById('dm-ats');
+  if (typeof l.atsScore === 'number') {
+    atsRow.style.display = '';
+    const top = (l.atsIssues || []).slice(0, 3)
+      .map(i => `<li style="font-size:12px;color:var(--muted);margin-top:4px;">[${i.severity}] ${(i.message||'').replace(/</g,'&lt;')}</li>`)
+      .join('');
+    const colour = l.atsScore >= 80 ? '#10B981' : l.atsScore >= 60 ? '#E8A020' : '#EF4444';
+    atsCell.innerHTML = `<div><strong style="color:${colour};font-size:18px;">${l.atsScore}</strong> / 100 · Grade ${l.atsGrade||'–'}${l.keywordMatch?` · ${l.keywordMatch.percent}% keyword match`:''}</div>${top?`<ul style="margin:6px 0 0;padding-left:18px;">${top}</ul>`:''}`;
+  } else {
+    atsRow.style.display = 'none';
+  }
 
   // Resume file link — fetched on demand because the signed URL is short-lived
   // (10min TTL) and only the /admin/leads/:id endpoint returns it. This keeps

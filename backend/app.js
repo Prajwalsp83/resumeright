@@ -21,6 +21,12 @@ const {
   verifyWebhookSignature,
 } = require('./payments');
 const { notifyAbandonedLead } = require('./notify');
+const { scoreResume } = require('./atsScore');
+// pdf-parse ships a debug harness that runs on bare `require('pdf-parse')`
+// when the package's own test PDF isn't present (it isn't, in node_modules).
+// Importing the inner module avoids that footgun.
+const pdfParse = require('pdf-parse/lib/pdf-parse.js');
+const multer = require('multer');
 
 const app = express();
 app.set('trust proxy', 1); // trust ALB + CloudFront
@@ -99,6 +105,9 @@ const leadResumeLimiter = rateLimit({ windowMs: 60 * 1000, max: 3, standardHeade
 // Abandoned-lead beacon. Browsers may fire it twice (visibilitychange + pagehide),
 // so allow a few hits per minute per IP — the dedupe is in the handler.
 const abandonLimiter = rateLimit({ windowMs: 60 * 1000, max: 6, standardHeaders: true });
+// Free ATS scan — public lead magnet. Tighter than /submit because each request
+// parses a PDF in-memory; cheap but easy to abuse with bursty traffic.
+const atsLimiter = rateLimit({ windowMs: 60 * 1000, max: 4, standardHeaders: true });
 
 app.use(generalLimiter);
 
@@ -353,6 +362,100 @@ app.post('/leads/:id/resume', leadResumeLimiter, (req, res, next) => {
 });
 
 // ═══════════════════════════════════════════════════════════════════════════
+// FREE ATS SCAN — public lead magnet
+// Flow:
+//   1. Frontend POSTs multipart: { resume (PDF), email, name?, phone?, targetRole?, jobDescription? }
+//   2. Backend extracts text via pdf-parse, runs heuristic scoring, stores
+//      a lead in 'ATS Scanned' state, returns the score breakdown.
+// Why a lead first: the email gate captures intent BEFORE the user sees a
+// score, so even if they bounce after seeing the result we have a re-target
+// hook. Status = 'ATS Scanned' so admin can prioritize follow-up over /submit.
+// ═══════════════════════════════════════════════════════════════════════════
+const atsMemoryUpload = multer({
+  storage: multer.memoryStorage(),
+  limits:  { fileSize: 5 * 1024 * 1024 }, // 5MB max
+  fileFilter(_req, file, cb) {
+    const ok = file.mimetype === 'application/pdf' || /\.pdf$/i.test(file.originalname);
+    cb(ok ? null : new Error('Only PDF files are accepted'), ok);
+  },
+});
+
+app.post('/tools/ats-score', atsLimiter, (req, res, next) => {
+  atsMemoryUpload.single('resume')(req, res, async err => {
+    if (err) return bad(res, err.message);
+    if (!req.file) return bad(res, 'Please attach a PDF resume');
+
+    try {
+      const email          = trim(req.body.email).toLowerCase();
+      const name           = trim(req.body.name);
+      const phone          = trim(req.body.phone);
+      const targetRole     = trim(req.body.targetRole).slice(0, 200);
+      const jobDescription = trim(req.body.jobDescription).slice(0, 6000);
+
+      // Email gate — required upfront. This is the lead magnet contract.
+      if (!emailRe.test(email)) return bad(res, 'Valid email is required');
+      if (phone && !phoneRe.test(phone)) return bad(res, 'Phone number looks invalid');
+
+      // Extract text. pdf-parse occasionally throws on weird PDFs — catch and
+      // surface a friendly message instead of a 500.
+      let text = '';
+      try {
+        const parsed = await pdfParse(req.file.buffer);
+        text = parsed?.text || '';
+      } catch (parseErr) {
+        console.error('[ats:parse]', parseErr.message);
+        return bad(res, 'Could not read this PDF. Try re-saving it as a fresh PDF (not a scan).', 422);
+      }
+
+      const result = scoreResume({ text, jobDescription });
+
+      // Persist as a lead so admin/sales can follow up. Note: we do NOT
+      // upload the PDF to S3 here — that costs money for a free tool and
+      // the score is the deliverable. If they convert we can request the
+      // PDF again at the paid step.
+      const leadDoc = {
+        name:         name || '(ATS scan)',
+        email,
+        phone:        phone || '',
+        service:      'Free ATS Scan',
+        targetRole,
+        atsScore:     result.score,
+        atsGrade:     result.grade,
+        atsIssues:    result.issues,
+        atsBreakdown: result.breakdown,
+        atsStats:     result.stats,
+        hadJD:        Boolean(jobDescription),
+        keywordMatch: result.keywordMatch || null,
+        originalName: req.file.originalname,
+        sizeBytes:    req.file.size,
+        utm:          req.body.utm && typeof req.body.utm === 'string'
+                        ? safeJsonParse(req.body.utm) : null,
+        status:       'ATS Scanned',
+        source:       'ats-tool',
+        createdAt:    new Date(),
+      };
+      const { insertedId } = await getDb().collection('leads').insertOne(leadDoc);
+
+      res.json({
+        success: true,
+        id:      insertedId,
+        score:        result.score,
+        grade:        result.grade,
+        issues:       result.issues,
+        strengths:    result.strengths,
+        breakdown:    result.breakdown,
+        stats:        result.stats,
+        keywordMatch: result.keywordMatch,
+      });
+    } catch (e) { next(e); }
+  });
+});
+
+function safeJsonParse(s) {
+  try { return JSON.parse(s); } catch { return null; }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
 // PAYMENTS — Razorpay
 // Flow:
 //   1. Frontend POSTs /payments/order with { packageName, amount, name, email, phone }
@@ -503,7 +606,7 @@ app.get('/admin/leads/:id', requireAuth('admin'), async (req, res, next) => {
 app.patch('/admin/leads/:id', requireAuth('admin'), async (req, res, next) => {
   try {
     if (!ObjectId.isValid(req.params.id)) return bad(res, 'Invalid id');
-    const allowed = ['New', 'Resume Uploaded', 'In Progress', 'Pending Payment', 'Paid', 'Completed', 'Lost', 'Abandoned'];
+    const allowed = ['New', 'Resume Uploaded', 'ATS Scanned', 'In Progress', 'Pending Payment', 'Paid', 'Completed', 'Lost', 'Abandoned'];
     const status = trim(req.body.status);
     if (!allowed.includes(status)) return bad(res, 'Invalid status');
     await getDb().collection('leads').updateOne(

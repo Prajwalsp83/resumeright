@@ -231,7 +231,77 @@ body.ub-on .hero{padding-top:156px;}
 .qc-file:hover{border-color:var(--gold);color:var(--white);}
 .qc-file.has-file{border-style:solid;border-color:var(--green);color:var(--white);}
 .qc-file-icon{font-size:18px;}
-.qc-file-text em{font-style:normal;color:var(--muted);font-size:11px;display:block;margin-top:2px;}
+.qc-file-text em{font-style:normal;color:var(--muted);font-size:11px;display:block;margin-up:0;margin-top:2px;}
+
+/* ATS SCANNER — instant scoring UI ─────────────────────────────────────── */
+.ats-stage{position:relative;}
+.ats-stage > .ats-step{display:none;}
+.ats-stage > .ats-step.active{display:block;animation:atsFade .35s ease both;}
+@keyframes atsFade{from{opacity:0;transform:translateY(8px);}to{opacity:1;transform:none;}}
+
+/* Scanning animation */
+.ats-scanning{padding:36px 8px 24px;text-align:center;}
+.ats-scan-bar{position:relative;width:100%;height:6px;background:var(--navy);border-radius:6px;overflow:hidden;margin:18px 0 22px;}
+.ats-scan-bar::after{content:"";position:absolute;left:0;top:0;height:100%;width:35%;background:linear-gradient(90deg,transparent,var(--gold),transparent);animation:atsSweep 1.4s linear infinite;}
+@keyframes atsSweep{0%{transform:translateX(-100%);}100%{transform:translateX(330%);}}
+.ats-scan-msg{font-size:13px;color:var(--muted);min-height:20px;}
+.ats-scan-msg strong{color:var(--white);font-weight:600;}
+
+/* Results card */
+.ats-result{padding:6px 0 0;}
+.ats-headline{display:flex;align-items:center;gap:18px;margin-bottom:18px;}
+.ats-circle{position:relative;width:96px;height:96px;flex-shrink:0;}
+.ats-circle svg{transform:rotate(-90deg);width:100%;height:100%;}
+.ats-circle .ats-track{stroke:var(--border);stroke-width:8;fill:none;}
+.ats-circle .ats-prog{stroke:url(#atsGrad);stroke-width:8;fill:none;stroke-linecap:round;transition:stroke-dashoffset 1.1s cubic-bezier(.2,.8,.2,1);}
+.ats-circle .ats-num{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-family:'Fraunces',serif;font-size:32px;color:var(--white);}
+.ats-grade-block h3{font-family:'Fraunces',serif;font-size:24px;margin:0 0 4px;line-height:1.1;}
+.ats-grade-block .ats-sub{font-size:13px;color:var(--muted);}
+.ats-grade-pill{display:inline-block;padding:3px 10px;background:var(--gold);color:var(--navy);border-radius:50px;font-weight:700;font-size:12px;margin-left:8px;letter-spacing:.4px;}
+
+.ats-bars{display:grid;grid-template-columns:1fr;gap:8px;margin:14px 0 18px;padding:14px;background:var(--navy);border-radius:12px;border:1px solid var(--border);}
+.ats-bar-row{display:grid;grid-template-columns:120px 1fr 32px;gap:10px;align-items:center;font-size:12px;}
+.ats-bar-row .ats-bar-lbl{color:var(--muted);}
+.ats-bar-track{height:6px;background:rgba(255,255,255,0.06);border-radius:6px;overflow:hidden;}
+.ats-bar-fill{height:100%;background:linear-gradient(90deg,var(--gold),var(--gold2));border-radius:6px;transition:width .9s cubic-bezier(.2,.8,.2,1);}
+.ats-bar-row .ats-bar-val{color:var(--white);text-align:right;font-variant-numeric:tabular-nums;}
+
+.ats-list{margin-top:6px;}
+.ats-list-title{font-size:13px;font-weight:600;color:var(--white);margin-bottom:8px;display:flex;align-items:center;gap:8px;}
+.ats-list-title.bad::before{content:"";width:6px;height:6px;border-radius:50%;background:#EF4444;}
+.ats-list-title.good::before{content:"";width:6px;height:6px;border-radius:50%;background:var(--green);}
+.ats-list ul{list-style:none;padding:0;margin:0 0 14px;}
+.ats-list li{padding:9px 12px;background:var(--navy);border:1px solid var(--border);border-radius:10px;font-size:13px;line-height:1.55;color:var(--white);margin-bottom:8px;display:flex;gap:10px;}
+.ats-list li .ats-tag{flex-shrink:0;font-size:10px;font-weight:700;padding:2px 8px;border-radius:50px;letter-spacing:.4px;text-transform:uppercase;height:18px;display:inline-flex;align-items:center;}
+.ats-list li .ats-tag.critical{background:rgba(239,68,68,.15);color:#FCA5A5;}
+.ats-list li .ats-tag.high{background:rgba(245,158,11,.15);color:#FBBF24;}
+.ats-list li .ats-tag.medium{background:rgba(99,102,241,.15);color:#A5B4FC;}
+.ats-list li .ats-tag.low{background:rgba(148,163,184,.15);color:#CBD5E1;}
+.ats-list li.good{color:var(--white);}
+.ats-list li.good::before{content:"✓";color:var(--green);font-weight:700;}
+
+.ats-cta{margin-top:18px;padding:18px;background:linear-gradient(135deg,rgba(232,160,32,.18),rgba(139,92,246,.12));border:1px solid rgba(232,160,32,.35);border-radius:14px;text-align:center;}
+.ats-cta h4{font-family:'Fraunces',serif;font-size:18px;margin:0 0 6px;}
+.ats-cta p{font-size:13px;color:var(--muted);margin:0 0 14px;}
+.ats-cta .btn-row{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;}
+.ats-cta button{flex:1;min-width:140px;padding:12px 18px;border-radius:10px;font-weight:700;font-size:14px;cursor:pointer;border:none;}
+.ats-cta .ats-cta-primary{background:var(--gold);color:var(--navy);}
+.ats-cta .ats-cta-secondary{background:transparent;color:var(--white);border:1px solid var(--border);}
+
+.ats-jd-toggle{font-size:12px;color:var(--gold);cursor:pointer;text-align:center;margin:6px 0 8px;user-select:none;}
+.ats-jd-toggle:hover{text-decoration:underline;}
+.ats-jd-area{display:none;}
+.ats-jd-area.open{display:block;}
+.ats-jd-area textarea{width:100%;min-height:90px;padding:12px 14px;background:var(--navy);border:1px solid var(--border);border-radius:10px;color:var(--white);font-size:13px;font-family:'Plus Jakarta Sans',sans-serif;margin-bottom:10px;resize:vertical;}
+.ats-jd-area textarea:focus{outline:none;border-color:var(--gold);}
+
+.ats-keymatch{margin:12px 0 6px;padding:12px;background:var(--navy);border:1px solid var(--border);border-radius:10px;font-size:12px;color:var(--muted);}
+.ats-keymatch strong{color:var(--white);font-size:14px;}
+
+@media(max-width:700px){
+  .ats-headline{flex-direction:column;align-items:flex-start;text-align:left;}
+  .ats-bar-row{grid-template-columns:90px 1fr 32px;font-size:11px;}
+}
 
 /* PAIN / FOMO SECTION — why they NEED this */
 .pain-section{background:var(--navy2);padding:80px 6vw;}
@@ -458,48 +528,114 @@ body{
   </div>
 </section>
 
-<!-- QUICK LEAD CAPTURE — top-of-funnel, simplified form -->
+<!-- LIVE ATS SCANNER — instant, automated, hooks the lead with real value -->
 <section class="quick-capture" id="quickCapture">
   <div class="qc-inner">
     <div class="qc-left">
-      <span class="section-tag" style="color:var(--gold);">FREE · NO CREDIT CARD</span>
-      <h2>Get a <em>Free ATS Scan</em> of Your Current Resume — in 60 seconds.</h2>
-      <p>We'll tell you exactly why recruiters are ignoring you — and how to fix it.</p>
+      <span class="section-tag" style="color:var(--gold);">FREE · INSTANT · NO CREDIT CARD</span>
+      <h2>Scan your resume against <em>real ATS rules</em> — in 30 seconds.</h2>
+      <p>Upload your PDF and get an instant score, line-by-line issues, and a fix-it plan. No 2-hour wait. No human review for the basics — just data.</p>
       <ul class="qc-points">
-        <li>Keyword match score (what recruiters actually search for)</li>
-        <li>Format issues that break ATS parsers</li>
-        <li>Personalized upgrade plan for your target role</li>
-        <li>Delivered to your WhatsApp within 2 hours</li>
+        <li>ATS parseability score (will the bot even read it?)</li>
+        <li>Section, contact, and keyword analysis</li>
+        <li>Quantified-impact + action-verb audit</li>
+        <li>Match against any job description (paste it in)</li>
       </ul>
     </div>
-    <form class="qc-form" onsubmit="event.preventDefault();submitQuickLead();">
-      <h3>Claim your free scan</h3>
-      <div class="qc-sub">Used by 23 people in the last 24 hours</div>
-      <input type="text" id="qc-name" placeholder="Your name" required>
-      <input type="tel" id="qc-phone" placeholder="WhatsApp number (for delivery)" required>
-      <input type="email" id="qc-email" placeholder="Email" required>
-      <select id="qc-target" required>
-        <option value="">What role are you targeting?</option>
-        <option>Software Engineer / Developer</option>
-        <option>Data / Analytics</option>
-        <option>DevOps / Cloud / SRE</option>
-        <option>Product Manager</option>
-        <option>Designer (UI/UX)</option>
-        <option>Marketing / Sales</option>
-        <option>Other</option>
-      </select>
 
-      <!-- Resume upload (optional but recommended) -->
-      <label class="qc-file" for="qc-resume">
-        <span class="qc-file-icon">📎</span>
-        <span class="qc-file-text" id="qc-file-text">Attach your current resume <em>(PDF/DOC — optional, speeds up scan)</em></span>
-        <input type="file" id="qc-resume" accept=".pdf,.doc,.docx" hidden>
-      </label>
+    <div class="qc-form ats-stage" id="atsStage">
+      <!-- STEP 1: input -->
+      <div class="ats-step active" id="atsStepInput">
+        <h3>Run my free scan</h3>
+        <div class="qc-sub">Instant results. We never sell your data.</div>
+        <input type="email" id="qc-email" placeholder="Your email (results sent here)" required>
+        <input type="text" id="qc-name" placeholder="Your name (optional)">
+        <input type="tel" id="qc-phone" placeholder="WhatsApp number (optional)">
+        <select id="qc-target">
+          <option value="">Target role (optional)</option>
+          <option>Software Engineer / Developer</option>
+          <option>Data / Analytics</option>
+          <option>DevOps / Cloud / SRE</option>
+          <option>Product Manager</option>
+          <option>Designer (UI/UX)</option>
+          <option>Marketing / Sales</option>
+          <option>Other</option>
+        </select>
 
-      <button type="submit" id="qcSubmit">Get My Free Scan →</button>
-      <div class="qc-trust">🔒 Your info is safe. We never spam. Unsubscribe anytime.</div>
-      <div class="qc-msg" id="qcMsg"></div>
-    </form>
+        <label class="qc-file" for="qc-resume">
+          <span class="qc-file-icon">📎</span>
+          <span class="qc-file-text" id="qc-file-text">Drop your resume here <em>(PDF only — max 5 MB)</em></span>
+          <input type="file" id="qc-resume" accept=".pdf,application/pdf" hidden>
+        </label>
+
+        <div class="ats-jd-toggle" id="atsJdToggle">+ Add a job description for keyword match</div>
+        <div class="ats-jd-area" id="atsJdArea">
+          <textarea id="qc-jd" placeholder="Paste the job description here for keyword scoring (optional)"></textarea>
+        </div>
+
+        <button type="button" id="qcSubmit" onclick="runAtsScan()">Scan My Resume →</button>
+        <div class="qc-trust">🔒 Your PDF is parsed in-memory and not stored. Email used only for follow-up.</div>
+        <div class="qc-msg" id="qcMsg"></div>
+      </div>
+
+      <!-- STEP 2: scanning -->
+      <div class="ats-step" id="atsStepScan">
+        <div class="ats-scanning">
+          <h3 style="font-size:18px;margin-bottom:6px;">Scanning your resume...</h3>
+          <div class="ats-scan-bar"></div>
+          <div class="ats-scan-msg" id="atsScanMsg"><strong>Extracting text...</strong></div>
+        </div>
+      </div>
+
+      <!-- STEP 3: results -->
+      <div class="ats-step" id="atsStepResult">
+        <div class="ats-result">
+          <div class="ats-headline">
+            <div class="ats-circle">
+              <svg viewBox="0 0 100 100">
+                <defs>
+                  <linearGradient id="atsGrad" x1="0" y1="0" x2="1" y2="0">
+                    <stop offset="0%" stop-color="#E8A020"/>
+                    <stop offset="100%" stop-color="#F5C153"/>
+                  </linearGradient>
+                </defs>
+                <circle class="ats-track" cx="50" cy="50" r="42"/>
+                <circle class="ats-prog" id="atsProgCircle" cx="50" cy="50" r="42"
+                  stroke-dasharray="263.89" stroke-dashoffset="263.89"/>
+              </svg>
+              <div class="ats-num" id="atsNum">0</div>
+            </div>
+            <div class="ats-grade-block">
+              <h3 id="atsGradeLabel">Your ATS Score <span class="ats-grade-pill" id="atsGradePill">–</span></h3>
+              <div class="ats-sub" id="atsGradeSub">Based on 7 weighted heuristics.</div>
+            </div>
+          </div>
+
+          <div class="ats-bars" id="atsBars"></div>
+
+          <div id="atsKeyMatchBox"></div>
+
+          <div class="ats-list" id="atsIssuesBlock">
+            <div class="ats-list-title bad">What's holding you back</div>
+            <ul id="atsIssuesList"></ul>
+          </div>
+
+          <div class="ats-list" id="atsStrengthsBlock">
+            <div class="ats-list-title good">What's working</div>
+            <ul id="atsStrengthsList"></ul>
+          </div>
+
+          <div class="ats-cta">
+            <h4>Want us to fix every issue for you?</h4>
+            <p>Our writers turn this scan into a recruiter-ready resume in 24–72h. ATS-optimized, keyword-tuned, ₹999 onwards.</p>
+            <div class="btn-row">
+              <button type="button" class="ats-cta-primary" onclick="document.getElementById('services').scrollIntoView({behavior:'smooth'});">See packages →</button>
+              <button type="button" class="ats-cta-secondary" onclick="resetAtsScan()">Scan another resume</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
 </section>
 
@@ -1245,12 +1381,17 @@ function askBot(q){addMsg(q,'user');document.getElementById('chatSugs').style.di
   tick();setInterval(tick,1000);
 })();
 
-// ─── QUICK LEAD FORM ─────────────────────────────────────────────────────────
-// Posts to /submit (same lead collection as the long form). Kept minimal on
-// purpose — 4 fields, one button. Conversion > completeness at this stage;
-// ops can collect details on the WhatsApp follow-up.
-// Show selected filename when user picks a resume
+// ─── LIVE ATS SCANNER ────────────────────────────────────────────────────────
+// POSTs to /tools/ats-score with a PDF + email. Backend extracts text and runs
+// heuristic scoring (atsScore.js). The result drives a 3-step UI: input →
+// scanning → results. Email is required upfront so even a low-score bounce
+// becomes a re-targetable lead in 'ATS Scanned' status.
+//
+// Note: input field IDs (qc-name, qc-phone, qc-email, qc-target) are kept
+// stable so the abandoned-lead beacon below continues to work unchanged.
+
 document.addEventListener('DOMContentLoaded',()=>{
+  // File picker UI
   const fileInput=document.getElementById('qc-resume');
   const fileLabel=document.querySelector('.qc-file');
   const fileText =document.getElementById('qc-file-text');
@@ -1258,84 +1399,234 @@ document.addEventListener('DOMContentLoaded',()=>{
     fileInput.addEventListener('change',()=>{
       const f=fileInput.files&&fileInput.files[0];
       if(f){
-        // Hard cap on client side too — backend enforces, but better UX to fail fast
         if(f.size>5*1024*1024){
-          fileText.innerHTML='⚠ File too large (max 5 MB) <em>Pick a smaller PDF/DOC</em>';
-          fileLabel.classList.remove('has-file');
-          fileInput.value='';
-          return;
+          fileText.innerHTML='⚠ File too large (max 5 MB) <em>Compress or save as a fresh PDF</em>';
+          fileLabel.classList.remove('has-file');fileInput.value='';return;
         }
-        fileText.innerHTML='✓ '+f.name+' <em>('+(f.size/1024).toFixed(0)+' KB — will be attached)</em>';
+        if(f.type && f.type !== 'application/pdf' && !/\.pdf$/i.test(f.name)){
+          fileText.innerHTML='⚠ PDF only <em>Re-export your resume as PDF</em>';
+          fileLabel.classList.remove('has-file');fileInput.value='';return;
+        }
+        fileText.innerHTML='✓ '+f.name+' <em>('+(f.size/1024).toFixed(0)+' KB — ready to scan)</em>';
         fileLabel.classList.add('has-file');
       }else{
-        fileText.innerHTML='Attach your current resume <em>(PDF/DOC — optional, speeds up scan)</em>';
+        fileText.innerHTML='Drop your resume here <em>(PDF only — max 5 MB)</em>';
         fileLabel.classList.remove('has-file');
       }
+    });
+    // Drag-and-drop on the label
+    fileLabel.addEventListener('dragover',e=>{e.preventDefault();fileLabel.style.borderColor='var(--gold)';});
+    fileLabel.addEventListener('dragleave',()=>{fileLabel.style.borderColor='';});
+    fileLabel.addEventListener('drop',e=>{
+      e.preventDefault();fileLabel.style.borderColor='';
+      const dt=e.dataTransfer;
+      if(dt&&dt.files&&dt.files[0]){fileInput.files=dt.files;fileInput.dispatchEvent(new Event('change'));}
+    });
+  }
+  // JD toggle
+  const tog=document.getElementById('atsJdToggle');
+  const area=document.getElementById('atsJdArea');
+  if(tog&&area){
+    tog.addEventListener('click',()=>{
+      const open=area.classList.toggle('open');
+      tog.textContent=open?'− Hide job description':'+ Add a job description for keyword match';
     });
   }
 });
 
-async function submitQuickLead(){
-  const name=document.getElementById('qc-name').value.trim();
-  const phone=document.getElementById('qc-phone').value.trim();
+function setAtsStep(stepId){
+  document.querySelectorAll('#atsStage .ats-step').forEach(el=>el.classList.remove('active'));
+  const next=document.getElementById(stepId);
+  if(next)next.classList.add('active');
+}
+
+async function runAtsScan(){
   const email=document.getElementById('qc-email').value.trim();
-  const target=document.getElementById('qc-target').value;
+  const name =document.getElementById('qc-name').value.trim();
+  const phone=document.getElementById('qc-phone').value.trim();
+  const role =document.getElementById('qc-target').value;
+  const jd   =document.getElementById('qc-jd').value.trim();
   const fileInput=document.getElementById('qc-resume');
   const file=fileInput&&fileInput.files&&fileInput.files[0]||null;
   const msg=document.getElementById('qcMsg');
   const btn=document.getElementById('qcSubmit');
   msg.textContent='';msg.className='qc-msg';
 
-  if(!name||!phone||!email||!target){
-    msg.textContent='Please fill all fields.';msg.className='qc-msg error';return;
-  }
-  btn.disabled=true;btn.textContent='Submitting...';
+  // Email gate (required), file gate (required)
+  const emailRe=/^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  if(!emailRe.test(email)){msg.textContent='Please enter a valid email.';msg.className='qc-msg error';return;}
+  if(!file){msg.textContent='Please attach your resume PDF.';msg.className='qc-msg error';return;}
+
+  btn.disabled=true;
+  // Start scanning UI
+  setAtsStep('atsStepScan');
+  cycleScanMessages();
+
   try{
-    // 1. Create lead first (small JSON request — fast, gives us an id)
-    const r=await fetch(API+'/submit',{
-      method:'POST',
-      headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({name,phone,email,service:'Free ATS Scan',target,source:'quick-capture',hasResume:!!file}),
-    });
+    const fd=new FormData();
+    fd.append('resume',file);
+    fd.append('email',email);
+    if(name)  fd.append('name',name);
+    if(phone) fd.append('phone',phone);
+    if(role)  fd.append('targetRole',role);
+    if(jd)    fd.append('jobDescription',jd);
+    try{ if(window.__rrUTM) fd.append('utm', JSON.stringify(window.__rrUTM)); }catch(_e){}
+
+    const r=await fetch(API+'/tools/ats-score',{method:'POST',body:fd});
     const d=await r.json().catch(()=>({}));
-    if(!r.ok){throw new Error(d.error||`HTTP ${r.status}`);}
+    if(!r.ok)throw new Error(d.error||('HTTP '+r.status));
 
-    // 2. If user attached a file, upload it to that lead.
-    //    We do this as a SECOND request so a slow upload never blocks the
-    //    lead from being captured — even if upload fails, ops has the lead.
-    if(file&&d.id){
-      btn.textContent='Uploading resume...';
-      try{
-        const fd=new FormData();
-        fd.append('resume',file);
-        const ur=await fetch(API+'/leads/'+d.id+'/resume',{method:'POST',body:fd});
-        const ud=await ur.json().catch(()=>({}));
-        if(!ur.ok)console.warn('[qc] resume upload failed:',ud.error||ur.status);
-      }catch(upErr){
-        console.warn('[qc] resume upload error:',upErr.message);
-        // Non-fatal — lead is already captured
-      }
-    }
-
-    msg.textContent=file
-      ? '✓ Got it! Resume received — we will WhatsApp your scan within 2 hours.'
-      : '✓ Got it! We will WhatsApp you within 2 hours.';
-    msg.className='qc-msg success';
-    btn.textContent='Submitted ✓';
     window.__rrFormSubmitted=true; // suppress abandonment beacon
-    // Clear form but keep the success state visible
-    ['qc-name','qc-phone','qc-email'].forEach(id=>document.getElementById(id).value='');
-    document.getElementById('qc-target').value='';
-    if(fileInput){fileInput.value='';}
-    const fileText=document.getElementById('qc-file-text');
-    const fileLabel=document.querySelector('.qc-file');
-    if(fileText)fileText.innerHTML='Attach your current resume <em>(PDF/DOC — optional, speeds up scan)</em>';
-    if(fileLabel)fileLabel.classList.remove('has-file');
+
+    // Track conversion (GA4 + Clarity if loaded)
+    try{ if(window.gtag) window.gtag('event','ats_scan_complete',{score:d.score,grade:d.grade}); }catch(_e){}
+    try{ if(window.clarity) window.clarity('event','ats_scan_complete'); }catch(_e){}
+
+    renderAtsResult(d);
+    setAtsStep('atsStepResult');
   }catch(e){
-    msg.textContent='Could not submit: '+e.message;
+    setAtsStep('atsStepInput');
+    msg.textContent='Scan failed: '+e.message;
     msg.className='qc-msg error';
-    btn.disabled=false;btn.textContent='Get My Free Scan →';
+    btn.disabled=false;
   }
+}
+
+function cycleScanMessages(){
+  const el=document.getElementById('atsScanMsg');
+  if(!el)return;
+  const msgs=[
+    '<strong>Extracting text...</strong>',
+    '<strong>Checking sections...</strong> Experience, Education, Skills',
+    '<strong>Scoring impact...</strong> action verbs, quantified results',
+    '<strong>Auditing format...</strong> length, spacing, ATS hygiene',
+    '<strong>Matching keywords...</strong>',
+  ];
+  let i=0;
+  el.innerHTML=msgs[0];
+  const t=setInterval(()=>{
+    i++;
+    if(i>=msgs.length||!document.getElementById('atsStepScan').classList.contains('active')){clearInterval(t);return;}
+    el.innerHTML=msgs[i];
+  },550);
+}
+
+function renderAtsResult(d){
+  // Score circle animation
+  const num=document.getElementById('atsNum');
+  const circle=document.getElementById('atsProgCircle');
+  const C=2*Math.PI*42; // ~263.89
+  const target=Math.max(0,Math.min(100,d.score||0));
+  // Animate count
+  let cur=0; const startTs=performance.now();
+  function animate(ts){
+    const t=Math.min(1,(ts-startTs)/1100);
+    const eased=1-Math.pow(1-t,3);
+    cur=Math.round(target*eased);
+    num.textContent=cur;
+    if(t<1)requestAnimationFrame(animate);
+  }
+  requestAnimationFrame(animate);
+  if(circle){
+    requestAnimationFrame(()=>{circle.style.strokeDashoffset=String(C*(1-target/100));});
+  }
+
+  // Grade pill + headline
+  const pill=document.getElementById('atsGradePill');
+  const sub =document.getElementById('atsGradeSub');
+  pill.textContent='Grade '+(d.grade||'–');
+  if(target>=80) sub.textContent='Strong resume — small tweaks left.';
+  else if(target>=60) sub.textContent='Decent base — clear gaps to fix.';
+  else if(target>=40) sub.textContent='Significant issues — fixing these unlocks callbacks.';
+  else sub.textContent='Critical issues — your resume likely never reaches a human.';
+
+  // Breakdown bars
+  const bars=document.getElementById('atsBars');
+  bars.innerHTML='';
+  const order=[
+    ['parseability','Parseability',20],
+    ['sections','Sections',20],
+    ['contact','Contact',10],
+    ['impact','Impact + verbs',20],
+    ['length','Length',10],
+    ['formatting','Formatting',10],
+    ['keywords','Keyword match',10],
+  ];
+  order.forEach(([key,label,max])=>{
+    const v=Math.max(0,Math.min(max,(d.breakdown&&d.breakdown[key])||0));
+    const pct=Math.round((v/max)*100);
+    const row=document.createElement('div');
+    row.className='ats-bar-row';
+    row.innerHTML='<div class="ats-bar-lbl">'+label+'</div>'
+                + '<div class="ats-bar-track"><div class="ats-bar-fill" style="width:0%"></div></div>'
+                + '<div class="ats-bar-val">'+v+'/'+max+'</div>';
+    bars.appendChild(row);
+    requestAnimationFrame(()=>{row.querySelector('.ats-bar-fill').style.width=pct+'%';});
+  });
+
+  // Keyword match block (only if JD was provided)
+  const km=document.getElementById('atsKeyMatchBox');
+  km.innerHTML='';
+  if(d.keywordMatch){
+    const k=d.keywordMatch;
+    const missing=(k.missing||[]).slice(0,8).join(', ');
+    km.innerHTML='<div class="ats-keymatch"><strong>'+k.percent+'% keyword match</strong> — '
+      + k.matched+' of '+k.total+' top keywords found.'
+      + (missing?'<br>Missing: <span style="color:#FBBF24;">'+escapeHtml(missing)+'</span>':'')
+      + '</div>';
+  }
+
+  // Issues
+  const issuesUl=document.getElementById('atsIssuesList');
+  const issuesBlk=document.getElementById('atsIssuesBlock');
+  issuesUl.innerHTML='';
+  const issues=d.issues||[];
+  if(issues.length===0){
+    issuesBlk.style.display='none';
+  }else{
+    issuesBlk.style.display='';
+    issues.forEach(it=>{
+      const li=document.createElement('li');
+      li.innerHTML='<span class="ats-tag '+(it.severity||'medium')+'">'+(it.severity||'medium')+'</span>'
+                 + '<span>'+escapeHtml(it.message||'')+'</span>';
+      issuesUl.appendChild(li);
+    });
+  }
+
+  // Strengths
+  const strUl=document.getElementById('atsStrengthsList');
+  const strBlk=document.getElementById('atsStrengthsBlock');
+  strUl.innerHTML='';
+  const strengths=d.strengths||[];
+  if(strengths.length===0){
+    strBlk.style.display='none';
+  }else{
+    strBlk.style.display='';
+    strengths.forEach(s=>{
+      const li=document.createElement('li');
+      li.className='good';
+      li.innerHTML='<span>'+escapeHtml(s)+'</span>';
+      strUl.appendChild(li);
+    });
+  }
+}
+
+function escapeHtml(s){
+  return String(s||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+function resetAtsScan(){
+  ['qc-email','qc-name','qc-phone','qc-jd'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+  const sel=document.getElementById('qc-target');if(sel)sel.value='';
+  const fi=document.getElementById('qc-resume');if(fi)fi.value='';
+  const ft=document.getElementById('qc-file-text');
+  const fl=document.querySelector('.qc-file');
+  if(ft)ft.innerHTML='Drop your resume here <em>(PDF only — max 5 MB)</em>';
+  if(fl)fl.classList.remove('has-file');
+  const btn=document.getElementById('qcSubmit');if(btn){btn.disabled=false;btn.textContent='Scan My Resume →';}
+  const msg=document.getElementById('qcMsg');if(msg){msg.textContent='';msg.className='qc-msg';}
+  setAtsStep('atsStepInput');
+  document.getElementById('quickCapture').scrollIntoView({behavior:'smooth'});
 }
 
 // ─── ABANDONED LEAD CAPTURE ─────────────────────────────────────────────────
