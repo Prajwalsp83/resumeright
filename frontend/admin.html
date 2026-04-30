@@ -559,11 +559,19 @@ async function showDetail(id){
       if(url){
         const isVideo = /^video\//i.test(l.mimeType||'') || /\.(mp4|webm|mov|m4v|ogg)$/i.test(l.originalName||'');
         if(isVideo){
+          // NOTE: do NOT use <source type="..."> — Safari refuses to load webm
+          // when the type attribute advertises it, even though it can play
+          // the file when opened directly. Direct src on <video> works wider.
+          // We also offer an "Open in new tab" link that hands off to the
+          // browser's native viewer (which uses system codecs and plays
+          // formats like webm that <video> may refuse).
           resumeDiv.innerHTML = `
-            <video controls style="width:100%;max-width:420px;border-radius:10px;background:#000;margin-top:6px;" preload="metadata">
-              <source src="${url}" type="${l.mimeType||'video/mp4'}">
-            </video>
-            <div style="margin-top:6px;"><a href="${url}" target="_blank" rel="noopener" download="${l.originalName||'pitch.mp4'}">⬇ Download original (${l.originalName||'video'})</a></div>`;
+            <video controls src="${url}" style="width:100%;max-width:420px;border-radius:10px;background:#000;margin-top:6px;display:block;"></video>
+            <div style="margin-top:8px;display:flex;gap:14px;flex-wrap:wrap;">
+              <a href="${url}" target="_blank" rel="noopener" style="color:var(--gold);">▶ Open in new tab</a>
+              <a href="${url}" target="_blank" rel="noopener" download="${l.originalName||'pitch.mp4'}">⬇ Download (${l.originalName||'video'})</a>
+            </div>
+            <div style="font-size:11px;color:var(--muted);margin-top:6px;">If the inline player above is blank, click "Open in new tab" — Safari can't decode .webm inline.</div>`;
         } else {
           resumeDiv.innerHTML = `<a href="${url}" target="_blank" rel="noopener">📄 ${l.originalName||'View Resume'} ↗</a> · <a href="${url}" download="${l.originalName||'resume.pdf'}" style="color:var(--gold);">⬇ Download</a>`;
         }

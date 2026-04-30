@@ -1841,8 +1841,16 @@ function vpToggleRecord(){
 function vpStartRecord(){
   if(!__vpStream)return;
   __vpChunks=[];
-  // Pick first supported mimeType — Safari sometimes only gets video/mp4
-  const candidates=['video/webm;codecs=vp9,opus','video/webm;codecs=vp8,opus','video/webm','video/mp4'];
+  // Codec preference: MP4 first because every browser AND every video player
+  // (including Safari + the admin <video> tag) plays it cleanly. Fall back
+  // to WebM only when MP4 isn't available (most Chrome/Firefox builds).
+  const candidates=[
+    'video/mp4;codecs=h264,aac',
+    'video/mp4',
+    'video/webm;codecs=vp9,opus',
+    'video/webm;codecs=vp8,opus',
+    'video/webm',
+  ];
   const mime=candidates.find(m=>window.MediaRecorder.isTypeSupported && window.MediaRecorder.isTypeSupported(m)) || '';
   try{
     __vpRecorder = mime ? new MediaRecorder(__vpStream,{mimeType:mime}) : new MediaRecorder(__vpStream);
