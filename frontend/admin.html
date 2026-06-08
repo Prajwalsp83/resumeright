@@ -542,6 +542,14 @@ async function showDetail(id){
       .join('');
     const colour = l.atsScore >= 80 ? '#10B981' : l.atsScore >= 60 ? '#E8A020' : '#EF4444';
     atsCell.innerHTML = `<div><strong style="color:${colour};font-size:18px;">${l.atsScore}</strong> / 100 · Grade ${l.atsGrade||'–'}${l.keywordMatch?` · ${l.keywordMatch.percent}% keyword match`:''}</div>${top?`<ul style="margin:6px 0 0;padding-left:18px;">${top}</ul>`:''}`;
+    // Paid AI deep-scan (₹199 add-on) — show the result if generated, or a
+    // "paid but pending" note so ops can resend manually if generation failed.
+    if (l.deepScanResult) {
+      const ds = l.deepScanResult;
+      atsCell.innerHTML += `<div style="margin-top:8px;padding-top:8px;border-top:1px solid rgba(255,255,255,.12);"><strong style="color:#E8A020;">AI Deep Scan</strong>${typeof ds.estimatedScoreAfterFixes==='number'?` · projected ${ds.estimatedScoreAfterFixes}/100`:''}<div style="font-size:12px;color:var(--muted);margin-top:4px;">${(ds.summary||'').replace(/</g,'&lt;')}</div></div>`;
+    } else if (l.deepScanPaid) {
+      atsCell.innerHTML += `<div style="margin-top:6px;font-size:12px;color:#E8A020;">AI Deep Scan paid — not yet generated</div>`;
+    }
   } else {
     atsRow.style.display = 'none';
   }
