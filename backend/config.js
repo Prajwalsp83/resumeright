@@ -48,6 +48,11 @@ const env = {
   // SES_FROM must be verified in SES; SES_TO is who gets the alert (admin inbox).
   SES_FROM: optional('SES_FROM', ''),
   SES_TO:   optional('SES_TO', ''),
+
+  // Anthropic — optional. Powers the paid AI deep-scan upsell. If missing, the
+  // /tools/ats-deep-scan endpoint returns 503 and the heuristic scan is unaffected.
+  ANTHROPIC_API_KEY: optional('ANTHROPIC_API_KEY', ''),
+  AI_MODEL:          optional('AI_MODEL', 'claude-opus-4-8'),
 };
 
 if (env.JWT_SECRET.length < 32) {
