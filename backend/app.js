@@ -28,6 +28,7 @@ const {
 } = require('./payments');
 const { notifyAbandonedLead } = require('./notify');
 const { scoreResume } = require('./atsScore');
+const { emitActivity } = require('./activity');
 // pdf-parse ships a debug harness that runs on bare `require('pdf-parse')`
 // when the package's own test PDF isn't present (it isn't, in node_modules).
 // Importing the inner module avoids that footgun.
@@ -454,6 +455,9 @@ app.post('/tools/ats-score', atsLimiter, (req, res, next) => {
       };
       const { insertedId } = await getDb().collection('leads').insertOne(leadDoc);
 
+      // D3 — real-time ticker (anonymised: first name + score only, no phone).
+      emitActivity({ type: 'ats_scan', firstName: (name || '').split(' ')[0] || 'Someone', score: result.score });
+
       res.json({
         success: true,
         id:      insertedId,
@@ -517,6 +521,10 @@ app.post('/tools/video-pitch', videoLimiter, (req, res, next) => {
         createdAt:    new Date(),
       };
       const { insertedId } = await getDb().collection('leads').insertOne(lead);
+
+      // D3 — real-time ticker (anonymised: first name only, no phone).
+      emitActivity({ type: 'video_pitch', firstName: (name || '').split(' ')[0] || 'Someone' });
+
       res.json({ success: true, id: insertedId });
     } catch (e) { next(e); }
   });

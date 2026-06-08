@@ -1,5 +1,6 @@
 const { app, connectDb } = require('./app');
 const env = require('./config');
+const { setIo } = require('./activity');
 
 // Listen FIRST, then connect to Mongo in the background. This keeps the
 // process alive (and the ALB target healthy on /healthz) even if Mongo is
@@ -8,6 +9,21 @@ const env = require('./config');
 const server = app.listen(env.PORT, '0.0.0.0', () => {
   console.log(`🚀 ResumeRight backend on :${env.PORT} (${env.NODE_ENV})`);
 });
+
+// D3 — socket.io for the real-time activity ticker. Attaches to the same HTTP
+// server (app.listen returns it). Namespace '/activity'. CORS mirrors the REST
+// allowlist. Lazy-required so a missing dep can't crash the API on boot.
+try {
+  const { Server } = require('socket.io');
+  const allowAll = env.CORS_ORIGINS.length === 1 && env.CORS_ORIGINS[0] === '*';
+  const io = new Server(server, {
+    cors: { origin: allowAll ? '*' : env.CORS_ORIGINS, methods: ['GET', 'POST'] },
+  });
+  setIo(io);
+  console.log('✓ socket.io /activity ready');
+} catch (e) {
+  console.warn('⚠️  socket.io not available — activity ticker disabled:', e.message);
+}
 
 // Retry Mongo connection with exponential backoff so transient Atlas hiccups
 // (cold start, DNS blip) don't require a pm2 restart.
