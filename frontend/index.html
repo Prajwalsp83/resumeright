@@ -502,8 +502,10 @@ body{
 }
 
 /* ─── Video tiles (replaces broken iframe embeds) ─────────────────────────
-   Click-through tiles that open curated YouTube searches in a new tab.
-   Visually mimic real YouTube cards: thumbnail + play button + duration.
+   Lazy click-to-play YouTube posters (lite-youtube pattern). Zero YouTube JS
+   or network until the user clicks: thumbnail-only poster, then swap in the
+   privacy-friendly youtube-nocookie iframe on demand. No CLS, no cookies on
+   first paint.
 */
 .video-link{ display: block; text-decoration: none; color: inherit; cursor: pointer; }
 .video-thumb{
@@ -551,6 +553,50 @@ body{
   font-family: 'Plus Jakarta Sans', sans-serif;
   z-index: 1;
 }
+/* ════ PREMIUM FRONTEND UPGRADE (D1–D6) — additive styles ════ */
+/* D1: lite-youtube click-to-play poster (button reset + centred play btn) */
+.lyt-poster{ border:0; padding:0; cursor:pointer; display:block; font:inherit; }
+.lyt-poster .lyt-thumb{ position:absolute; inset:0; width:100%; height:100%; object-fit:cover; z-index:0; }
+.lyt-poster .yt-play-btn{ position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); }
+.lyt-poster:hover .yt-play-btn,
+.lyt-poster:focus-visible .yt-play-btn{ transform:translate(-50%,-50%) scale(1.12); background:rgb(255,0,0); }
+.lyt-poster:focus-visible{ outline:2px solid var(--gold); outline-offset:3px; }
+.thumb-green{ background:linear-gradient(135deg,#064e3b 0%,#059669 60%,#10b981 100%); }
+.thumb-teal { background:linear-gradient(135deg,#134e4a 0%,#0d9488 60%,#14b8a6 100%); }
+.thumb-rose { background:linear-gradient(135deg,#881337 0%,#be123c 55%,#f43f5e 100%); }
+/* D2 — 3D hero canvas (desktop only; mobile/reduced-motion keep the gradient) */
+.hero-3d{ position:absolute; inset:0; width:100%; height:100%; z-index:0; pointer-events:none; display:block; }
+.hero > .badge, .hero > h1, .hero > p, .hero > .hero-btns, .hero > .hero-stats{ position:relative; z-index:2; }
+.hero::before{ z-index:1; }
+@media (max-width:639px){ .hero-3d{ display:none; } }
+/* D3 — real-time activity ticker pill */
+.act-ticker{ position:fixed; left:16px; bottom:16px; z-index:120; max-width:320px; background:rgba(19,31,50,0.88); backdrop-filter:blur(10px); border:1px solid var(--border); border-radius:999px; color:var(--white); font-size:13px; font-weight:500; line-height:1.3; padding:9px 16px; box-shadow:0 8px 24px rgba(0,0,0,0.35); opacity:0; transform:translateY(10px); pointer-events:none; transition:opacity .35s ease, transform .35s ease; }
+.act-ticker.show{ opacity:1; transform:translateY(0); }
+@media (max-width:419px){ .act-ticker{ display:none; } }
+/* D4 — micro-interactions */
+@property --rr-angle{ syntax:'<angle>'; initial-value:0deg; inherits:false; }
+@keyframes rr-spin{ to{ --rr-angle:360deg; } }
+.svc-tab.active{ position:relative; }
+.svc-tab.active::before{ content:''; position:absolute; inset:-2px; border-radius:50px; z-index:-1; background:conic-gradient(from var(--rr-angle), var(--gold), #F5BC50, #8B5CF6, var(--gold)); animation:rr-spin 4s linear infinite; }
+@keyframes rr-focus{ 0%,100%{ box-shadow:0 0 0 2px rgba(232,160,32,.9), 0 0 16px rgba(232,160,32,.25); } 50%{ box-shadow:0 0 0 2px rgba(245,188,80,.95), 0 0 22px rgba(139,92,246,.30); } }
+input:focus, textarea:focus, select:focus{ outline:none; border-color:transparent !important; animation:rr-focus 2.4s ease-in-out infinite; }
+.pain-num{ will-change:transform; }
+@media (prefers-reduced-motion: reduce){ .svc-tab.active::before{ animation:none; } input:focus, textarea:focus, select:focus{ animation:none; box-shadow:0 0 0 2px var(--gold); } }
+/* D5 — Lenis smooth scroll (applied only on desktop/non-touch; see bootstrap) */
+html.lenis, html.lenis body{ height:auto; }
+.lenis.lenis-smooth{ scroll-behavior:auto !important; }
+.lenis.lenis-smooth [data-lenis-prevent]{ overscroll-behavior:contain; }
+.lenis.lenis-stopped{ overflow:hidden; }
+/* D6 — hero "watch how it works" link + video lightbox */
+.hero-watch{ margin-top:18px; background:none; border:0; color:var(--muted); font-size:14px; cursor:pointer; font-family:inherit; text-decoration:underline; text-underline-offset:4px; position:relative; z-index:2; }
+.hero-watch:hover{ color:var(--gold); }
+.vlb{ position:fixed; inset:0; z-index:600; background:rgba(0,0,0,0.85); display:flex; align-items:center; justify-content:center; padding:20px; opacity:0; transition:opacity .25s ease; }
+.vlb.open{ opacity:1; }
+.vlb-inner{ position:relative; width:min(900px,92vw); aspect-ratio:16/9; }
+.vlb-frame{ position:absolute; inset:0; }
+.vlb-frame iframe{ width:100%; height:100%; border:0; border-radius:12px; }
+.vlb-close{ position:absolute; top:-44px; right:0; width:36px; height:36px; border-radius:50%; background:rgba(255,255,255,0.12); color:#fff; border:1px solid rgba(255,255,255,0.25); font-size:22px; line-height:1; cursor:pointer; }
+.vlb-close:hover{ background:rgba(255,255,255,0.22); }
 </style>
 </head>
 <body class="ub-on">
@@ -572,6 +618,7 @@ body{
 
 <!-- HERO -->
 <section class="hero">
+  <canvas id="hero3d" class="hero-3d" aria-hidden="true"></canvas>
   <div class="badge"><span class="badge-dot"></span>India's #1 Career Services Platform · 500+ hired</div>
   <h1>Don't Wait For Luck. <em>Create Your Shot.</em></h1>
   <p>75% of resumes are rejected by ATS bots before a human ever sees them. While you're scrolling, someone with a weaker profile just got hired for the role you want — because they knew the system. Fix your resume in 24 hours, or your money back.</p>
@@ -579,6 +626,8 @@ body{
     <button class="btn-primary" onclick="document.getElementById('quickCapture').scrollIntoView({behavior:'smooth'})">Get My Free ATS Scan →</button>
     <button class="btn-outline" onclick="document.getElementById('videoPitch').scrollIntoView({behavior:'smooth'})">🎥 Get Interview Coaching</button>
   </div>
+  <!-- D6 — stays hidden until Praj sets a real data-video-id (the 30s walkthrough). -->
+  <button class="hero-watch" id="heroWatchBtn" data-video-id="" hidden>🎬 Watch how it works (30s)</button>
   <div class="hero-stats">
     <div><span class="stat-num">500+</span><span class="stat-label">Clients placed</span></div>
     <div><span class="stat-num">98%</span><span class="stat-label">ATS pass rate</span></div>
@@ -586,6 +635,95 @@ body{
     <div><span class="stat-num">4.9★</span><span class="stat-label">Average rating</span></div>
   </div>
 </section>
+<script>
+// D2 — Three.js hero scene. LAZY + GATED: three.js (~150KB gzip) is fetched
+// ONLY on desktop (>=640px) with motion allowed, so mobile/4G users download
+// ZERO extra bytes and keep the static gradient. Honors prefers-reduced-motion.
+// Pauses the render loop when the hero is off-screen or the tab is hidden.
+(function(){
+  var canvas=document.getElementById('hero3d');
+  if(!canvas) return;
+  var reduce=window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  var wide=window.matchMedia('(min-width: 640px)').matches;
+  if(reduce || !wide) return; // static gradient fallback — nothing loaded
+
+  var s=document.createElement('script');
+  s.src='https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js';
+  s.async=true;
+  s.onload=init;
+  s.onerror=function(){ /* network/CDN fail — leave the gradient, no error */ };
+  document.head.appendChild(s);
+
+  function init(){
+    if(!window.THREE) return;
+    var hero=canvas.parentElement;
+    var W=hero.clientWidth, H=hero.clientHeight;
+    var scene=new THREE.Scene();
+    var camera=new THREE.PerspectiveCamera(55, W/H, 0.1, 100);
+    camera.position.z=14;
+    var renderer=new THREE.WebGLRenderer({canvas:canvas, alpha:true, antialias:true});
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio||1, 2));
+    renderer.setSize(W, H, false);
+
+    var GOLD=0xE8A020, GOLD2=0xF5BC50, NAVY=0x1b2c4a, WHITE=0xF8F5EE;
+    var geoms=[
+      new THREE.IcosahedronGeometry(1.6, 0),
+      new THREE.OctahedronGeometry(1.3, 0),
+      new THREE.TetrahedronGeometry(1.5, 0),
+      new THREE.TorusGeometry(1.0, 0.34, 8, 18),
+    ];
+    var colors=[GOLD, GOLD2, NAVY, WHITE];
+    var group=new THREE.Group(); scene.add(group);
+    var meshes=[];
+    for(var i=0;i<11;i++){
+      var m=new THREE.Mesh(geoms[i%geoms.length], new THREE.MeshStandardMaterial({
+        color:colors[i%colors.length], roughness:0.35, metalness:0.6,
+        transparent:true, opacity:0.85, flatShading:true,
+      }));
+      m.position.set((Math.random()-0.5)*22, (Math.random()-0.5)*13, (Math.random()-0.5)*8 - 2);
+      var sc=0.5+Math.random()*0.9; m.scale.set(sc,sc,sc);
+      m.rotation.set(Math.random()*6, Math.random()*6, Math.random()*6);
+      m.userData={spin:(Math.random()-0.5)*0.004, float:0.4+Math.random()*0.6, phase:Math.random()*6.28};
+      group.add(m); meshes.push(m);
+    }
+    scene.add(new THREE.AmbientLight(0xffffff, 0.55));
+    var p1=new THREE.PointLight(GOLD, 1.1, 60); p1.position.set(-10,8,12); scene.add(p1);
+    var p2=new THREE.PointLight(0x6aa0ff, 0.7, 60); p2.position.set(12,-6,8); scene.add(p2);
+
+    var mx=0, my=0, tx=0, ty=0;
+    window.addEventListener('pointermove', function(e){
+      mx=(e.clientX/window.innerWidth)*2-1; my=(e.clientY/window.innerHeight)*2-1;
+    }, {passive:true});
+    window.addEventListener('resize', function(){
+      W=hero.clientWidth; H=hero.clientHeight;
+      camera.aspect=W/H; camera.updateProjectionMatrix(); renderer.setSize(W,H,false);
+    }, {passive:true});
+
+    var running=false, raf=0, t0=performance.now();
+    function loop(now){
+      if(!running) return;
+      raf=requestAnimationFrame(loop);
+      var t=(now-t0)/1000;
+      tx+=(mx*0.35-tx)*0.05; ty+=(my*0.35-ty)*0.05;
+      group.rotation.y=t*0.04+tx; group.rotation.x=-ty*0.6;
+      for(var i=0;i<meshes.length;i++){
+        var ms=meshes[i];
+        ms.rotation.x+=ms.userData.spin; ms.rotation.y+=ms.userData.spin*1.3;
+        ms.position.y+=Math.sin(t*ms.userData.float+ms.userData.phase)*0.003;
+      }
+      renderer.render(scene, camera);
+    }
+    function start(){ if(running) return; running=true; t0=performance.now(); raf=requestAnimationFrame(loop); }
+    function stop(){ running=false; if(raf) cancelAnimationFrame(raf); raf=0; }
+
+    document.addEventListener('visibilitychange', function(){ document.hidden?stop():start(); });
+    if('IntersectionObserver' in window){
+      new IntersectionObserver(function(es){ es[0].isIntersecting?start():stop(); }, {threshold:0.01}).observe(hero);
+    }
+    start();
+  }
+})();
+</script>
 
 <!-- LIVE ATS SCANNER — instant, automated, hooks the lead with real value -->
 <section class="quick-capture" id="quickCapture">
@@ -1164,46 +1302,123 @@ body{
     <span class="section-tag">Free ATS Education</span>
     <h2 class="section-title">The ATS Secrets Recruiters Don't Want You to Know</h2>
     <p class="section-sub" style="margin:0 auto 8px;">Watch these before you submit your next application. Most people skip this — and stay unemployed.</p>
-    <div class="video-grid">
-      <a class="video-card video-link" target="_blank" rel="noopener"
-         href="https://www.youtube.com/results?search_query=ATS+friendly+resume+tutorial+Indian+students+Aman+Dhattarwal">
-        <div class="video-embed video-thumb thumb-blue">
-          <span class="yt-play-btn" aria-label="Play"><span class="yt-tri"></span></span>
-          <span class="yt-duration">12:48</span>
-        </div>
+
+    <!--
+      Each tile plays inline on click. To wire a real video, set ONE attribute:
+        data-yt-id="XXXXXXXXXXX"   (the 11-char YouTube video id from the URL)
+      The thumbnail + click-to-play are then automatic. An empty id shows the
+      gradient placeholder below. TODO(Praj): drop in the 6 curated video ids.
+    -->
+    <div class="video-grid" id="ytGrid">
+      <div class="video-card lite-yt">
+        <!-- TODO: data-yt-id="" -->
+        <button type="button" class="video-embed lyt-poster thumb-blue" data-yt-id="" aria-label="Play: How ATS Actually Screens Your Resume">
+          <span class="yt-play-btn"><span class="yt-tri"></span></span>
+        </button>
         <div class="video-meta">
           <h4>How ATS Actually Screens Your Resume</h4>
-          <p>Why 75% of resumes never reach a human — and the simple formatting fix that changes everything. (Watch top picks on YouTube →)</p>
+          <p>Why 75% of resumes never reach a human — and the simple formatting fix that changes everything.</p>
         </div>
-      </a>
-      <a class="video-card video-link" target="_blank" rel="noopener"
-         href="https://www.youtube.com/results?search_query=resume+keywords+tech+jobs+India+ATS+2026">
-        <div class="video-embed video-thumb thumb-purple">
-          <span class="yt-play-btn" aria-label="Play"><span class="yt-tri"></span></span>
-          <span class="yt-duration">9:21</span>
-        </div>
+      </div>
+
+      <div class="video-card lite-yt">
+        <!-- TODO: data-yt-id="" -->
+        <button type="button" class="video-embed lyt-poster thumb-purple" data-yt-id="" aria-label="Play: Keywords That Actually Work in 2026">
+          <span class="yt-play-btn"><span class="yt-tri"></span></span>
+        </button>
         <div class="video-meta">
           <h4>Keywords That Actually Work in 2026</h4>
-          <p>The exact keywords recruiters search for — and where to place them so ATS picks them up. (Watch top picks on YouTube →)</p>
+          <p>The exact keywords recruiters search for — and where to place them so ATS picks them up.</p>
         </div>
-      </a>
-      <a class="video-card video-link" target="_blank" rel="noopener"
-         href="https://www.youtube.com/results?search_query=resume+mistakes+freshers+India+interview+ATS">
-        <div class="video-embed video-thumb thumb-amber">
-          <span class="yt-play-btn" aria-label="Play"><span class="yt-tri"></span></span>
-          <span class="yt-duration">15:07</span>
-        </div>
+      </div>
+
+      <div class="video-card lite-yt">
+        <!-- TODO: data-yt-id="" -->
+        <button type="button" class="video-embed lyt-poster thumb-amber" data-yt-id="" aria-label="Play: 7 Resume Mistakes Costing You Interviews">
+          <span class="yt-play-btn"><span class="yt-tri"></span></span>
+        </button>
         <div class="video-meta">
           <h4>7 Resume Mistakes Costing You Interviews</h4>
-          <p>The silent resume-killers: tables, headers, fonts, icons. If yours has these, you're invisible. (Watch top picks on YouTube →)</p>
+          <p>The silent resume-killers: tables, headers, fonts, icons. If yours has these, you're invisible.</p>
         </div>
-      </a>
+      </div>
+
+      <div class="video-card lite-yt">
+        <!-- TODO: data-yt-id="" -->
+        <button type="button" class="video-embed lyt-poster thumb-green" data-yt-id="" aria-label="Play: Cracking the Indian Job Market — Naukri + LinkedIn">
+          <span class="yt-play-btn"><span class="yt-tri"></span></span>
+        </button>
+        <div class="video-meta">
+          <h4>Cracking the Indian Job Market</h4>
+          <p>How recruiters in India actually source on Naukri and LinkedIn — and how to show up in their search.</p>
+        </div>
+      </div>
+
+      <div class="video-card lite-yt">
+        <!-- TODO: data-yt-id="" -->
+        <button type="button" class="video-embed lyt-poster thumb-teal" data-yt-id="" aria-label="Play: Interview Prep — The First 5 Minutes">
+          <span class="yt-play-btn"><span class="yt-tri"></span></span>
+        </button>
+        <div class="video-meta">
+          <h4>Interview Prep: The First 5 Minutes</h4>
+          <p>Structure your introduction and STAR answers so the first impression works for you, not against you.</p>
+        </div>
+      </div>
+
+      <div class="video-card lite-yt">
+        <!-- TODO: data-yt-id="" -->
+        <button type="button" class="video-embed lyt-poster thumb-rose" data-yt-id="" aria-label="Play: A LinkedIn Profile That Gets You Found">
+          <span class="yt-play-btn"><span class="yt-tri"></span></span>
+        </button>
+        <div class="video-meta">
+          <h4>A LinkedIn Profile That Gets You Found</h4>
+          <p>The profile sections recruiters search — optimised so inbound messages start landing in your inbox.</p>
+        </div>
+      </div>
     </div>
     <div style="margin-top:40px;">
       <button class="btn-primary" onclick="document.getElementById('quickCapture').scrollIntoView({behavior:'smooth'})">Get My Resume Audited Free →</button>
     </div>
   </div>
 </section>
+<script>
+// D1 — lite-youtube: hydrate posters that have a real id with the YouTube
+// thumbnail, then swap in the iframe on click. No YouTube JS/network until click.
+(function(){
+  var GRADIENTS=['thumb-blue','thumb-purple','thumb-amber','thumb-green','thumb-teal','thumb-rose'];
+  function hydrate(btn){
+    var id=btn.getAttribute('data-yt-id');
+    if(!id) return; // placeholder — keep gradient, no broken thumbnail request
+    var img=document.createElement('img');
+    img.className='lyt-thumb'; img.loading='lazy'; img.alt='';
+    img.width=480; img.height=360;
+    img.src='https://i.ytimg.com/vi/'+id+'/hqdefault.jpg';
+    btn.insertBefore(img, btn.firstChild);
+    GRADIENTS.forEach(function(g){ btn.classList.remove(g); });
+  }
+  function play(btn){
+    var id=btn.getAttribute('data-yt-id');
+    if(!id) return;
+    var wrap=document.createElement('div');
+    wrap.className='video-embed';
+    var ifr=document.createElement('iframe');
+    ifr.src='https://www.youtube-nocookie.com/embed/'+encodeURIComponent(id)+'?autoplay=1&rel=0';
+    ifr.title=btn.getAttribute('aria-label')||'YouTube video player';
+    ifr.allow='accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share';
+    ifr.allowFullscreen=true;
+    ifr.setAttribute('loading','lazy');
+    wrap.appendChild(ifr);
+    btn.replaceWith(wrap);
+  }
+  var grid=document.getElementById('ytGrid');
+  if(!grid) return;
+  grid.querySelectorAll('.lyt-poster').forEach(hydrate);
+  grid.addEventListener('click', function(e){
+    var btn=e.target.closest('.lyt-poster');
+    if(btn) play(btn);
+  });
+})();
+</script>
 
 <!-- REVIEWS -->
 <section id="reviews" class="center">
@@ -2377,6 +2592,166 @@ async function buyPackage(packageId){
       });
     }, { threshold: 0.5 });
     counterObs.observe(el);
+  });
+})();
+</script>
+
+<!-- D3 — real-time activity ticker (social proof). -->
+<div id="activityTicker" class="act-ticker" role="status" aria-live="polite"></div>
+<script src="https://cdn.socket.io/4.7.5/socket.io.min.js" defer></script>
+<script>
+// D3 — subscribe to /activity and rotate a glassmorphic pill. Suppressed on
+// reduced-motion and on phones <420px. Runs on DOMContentLoaded so the deferred
+// socket.io client + the API const are ready.
+window.addEventListener('DOMContentLoaded', function(){
+  var el=document.getElementById('activityTicker');
+  if(!el) return;
+  if(window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  if(window.matchMedia('(max-width: 419px)').matches) return;
+  if(typeof io==='undefined') return; // socket.io failed to load — skip silently
+
+  var queue=[], showing=false;
+  function fmt(e){
+    var who=e.firstName||'Someone';
+    var where=e.city?(' from '+e.city):'';
+    if(e.type==='ats_scan')    return '✓ '+who+where+' just scored '+(e.score!=null?e.score:'')+' on the ATS scan';
+    if(e.type==='video_pitch') return '🎥 '+who+where+' just recorded a video pitch';
+    return '✓ '+who+where+' is improving their resume';
+  }
+  function next(){
+    if(showing||!queue.length) return;
+    showing=true;
+    el.textContent=fmt(queue.shift());
+    el.classList.add('show');
+    setTimeout(function(){
+      el.classList.remove('show');
+      setTimeout(function(){ showing=false; next(); }, 500);
+    }, 6000);
+  }
+  try{
+    var socket=io(API+'/activity', { transports:['websocket','polling'] });
+    socket.on('activity', function(e){
+      queue.push(e);
+      if(queue.length>5) queue.shift();
+      next();
+    });
+  }catch(_e){ /* connection error — ticker stays hidden */ }
+});
+</script>
+
+<script>
+// D4 — scroll storytelling + micro-interactions (no library, ~2KB).
+// Count-up on the FOMO numbers, parallax on them, magnetic primary CTAs.
+(function(){
+  if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  if (!('IntersectionObserver' in window)) return;
+
+  document.querySelectorAll('.pain-num').forEach(function(el){
+    var m=el.textContent.trim().match(/^([^\d]*)([\d.]+)(.*)$/);
+    if(!m) return;
+    var pre=m[1], target=parseFloat(m[2]), suf=m[3], isFloat=!Number.isInteger(target);
+    el.textContent=pre+'0'+suf;
+    new IntersectionObserver(function(es,o){
+      es.forEach(function(e){
+        if(!e.isIntersecting) return;
+        var dur=800, t0=performance.now();
+        (function tick(now){
+          var p=Math.min(1,(now-t0)/dur);
+          var eased=1-Math.pow(1-p,4); // easeOutQuart
+          el.textContent=pre+(isFloat?(target*eased).toFixed(1):Math.floor(target*eased))+suf;
+          if(p<1) requestAnimationFrame(tick);
+          else el.textContent=pre+(isFloat?target.toFixed(1):target)+suf;
+        })(performance.now());
+        o.unobserve(e.target);
+      });
+    },{threshold:0.5}).observe(el);
+  });
+
+  var pnums=[].slice.call(document.querySelectorAll('.pain-num'));
+  if(pnums.length){
+    var ticking=false;
+    function par(){
+      ticking=false;
+      var vh=window.innerHeight;
+      pnums.forEach(function(el){
+        var r=el.getBoundingClientRect();
+        var off=((r.top+r.height/2)-vh/2)/vh;
+        el.style.transform='translateY('+(off*-14).toFixed(1)+'px)';
+      });
+    }
+    window.addEventListener('scroll',function(){ if(!ticking){ticking=true;requestAnimationFrame(par);} },{passive:true});
+    par();
+  }
+
+  var mags=[].slice.call(document.querySelectorAll('.btn-primary'));
+  if(mags.length && window.matchMedia('(hover:hover) and (pointer:fine)').matches){
+    mags.forEach(function(b){ b.style.transition='transform .18s ease-out'; });
+    document.addEventListener('pointermove',function(e){
+      mags.forEach(function(b){
+        var r=b.getBoundingClientRect();
+        if(!r.width) return;
+        var dx=e.clientX-(r.left+r.width/2), dy=e.clientY-(r.top+r.height/2);
+        if(Math.hypot(dx,dy)<120) b.style.transform='translate('+(dx*0.3).toFixed(1)+'px,'+(dy*0.4).toFixed(1)+'px)';
+        else if(b.style.transform) b.style.transform='';
+      });
+    },{passive:true});
+  }
+})();
+</script>
+
+<!-- D5 — Lenis smooth scroll. Desktop/non-touch only; mobile keeps native scroll. -->
+<script src="https://cdn.jsdelivr.net/npm/lenis@1.1.13/dist/lenis.min.js" defer></script>
+<script>
+window.addEventListener('DOMContentLoaded', function(){
+  if(window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  if(window.matchMedia('(pointer: coarse)').matches) return; // touch — native scroll
+  if(typeof Lenis==='undefined') return; // CDN failed — native scroll, no error
+  var lenis=new Lenis({ duration:1.1, smoothWheel:true });
+  function raf(t){ lenis.raf(t); requestAnimationFrame(raf); }
+  requestAnimationFrame(raf);
+  var native=Element.prototype.scrollIntoView;
+  Element.prototype.scrollIntoView=function(opts){
+    if(!opts || opts.behavior==='smooth') lenis.scrollTo(this, { offset:0 });
+    else native.apply(this, arguments);
+  };
+});
+</script>
+
+<!-- D6 — hero walkthrough video lightbox (lazy youtube; click-outside/Esc to close) -->
+<div id="videoLightbox" class="vlb" hidden>
+  <div class="vlb-inner">
+    <button class="vlb-close" aria-label="Close">×</button>
+    <div class="vlb-frame" id="vlbFrame"></div>
+  </div>
+</div>
+<script>
+// D6 — show the hero "watch how it works" link only when a real walkthrough id
+// is set on #heroWatchBtn[data-video-id]. Opens a full-viewport lightbox that
+// lazy-loads the youtube-nocookie iframe; closing removes it to stop playback.
+(function(){
+  var btn=document.getElementById('heroWatchBtn');
+  var lb=document.getElementById('videoLightbox');
+  var frame=document.getElementById('vlbFrame');
+  if(!btn||!lb||!frame) return;
+  var id=(btn.getAttribute('data-video-id')||'').trim();
+  if(!id) return; // no walkthrough recorded yet — link stays hidden
+  btn.hidden=false;
+
+  function onKey(e){ if(e.key==='Escape') close(); }
+  function open(){
+    frame.innerHTML='<iframe src="https://www.youtube-nocookie.com/embed/'+encodeURIComponent(id)+'?autoplay=1&rel=0" title="How ResumeRight works" allow="autoplay; encrypted-media; picture-in-picture; fullscreen" allowfullscreen loading="lazy"></iframe>';
+    lb.hidden=false;
+    requestAnimationFrame(function(){ lb.classList.add('open'); });
+    document.addEventListener('keydown', onKey);
+  }
+  function close(){
+    lb.classList.remove('open');
+    document.removeEventListener('keydown', onKey);
+    setTimeout(function(){ lb.hidden=true; frame.innerHTML=''; }, 250);
+  }
+  btn.addEventListener('click', open);
+  lb.addEventListener('click', function(e){
+    if(e.target===lb || e.target.classList.contains('vlb-close')) close();
   });
 })();
 </script>
