@@ -28,6 +28,7 @@ const {
 } = require('./payments');
 const { notifyAbandonedLead } = require('./notify');
 const { scoreResume } = require('./atsScore');
+const { aiEnabled, deepScanResume } = require('./ai');
 // pdf-parse ships a debug harness that runs on bare `require('pdf-parse')`
 // when the package's own test PDF isn't present (it isn't, in node_modules).
 // Importing the inner module avoids that footgun.
@@ -53,6 +54,19 @@ app.use(cors({
   allowedHeaders: ['Content-Type', 'Authorization'],
 }));
 
+// When a confirmed payment is an AI deep-scan add-on, unlock the referenced
+// ATS lead so /tools/ats-deep-scan will run. Idempotent — safe to call from
+// both the webhook and the verify endpoint (whichever confirms first wins;
+// the second is a harmless no-op re-set).
+async function applyPaidSideEffects(lead) {
+  if (lead && lead.deepScanForLeadId) {
+    await getDb().collection('leads').updateOne(
+      { _id: lead.deepScanForLeadId },
+      { $set: { deepScanPaid: true, deepScanPaidAt: new Date(), updatedAt: new Date() } },
+    );
+  }
+}
+
 // ─── Razorpay webhook (raw body BEFORE express.json) ───────────────────────
 // Webhook signature = HMAC-SHA256 of the EXACT request bytes, so we must
 // capture the raw body before any JSON parsing middleware runs.
@@ -71,8 +85,9 @@ app.post('/payments/webhook',
       const orderId = payment?.order_id;
 
       if (event.event === 'payment.captured' && orderId) {
+        const leads = getDb().collection('leads');
         // Idempotent: update by orderId; won't double-apply if webhook retries.
-        await getDb().collection('leads').updateOne(
+        await leads.updateOne(
           { razorpayOrderId: orderId },
           {
             $set: {
@@ -85,6 +100,8 @@ app.post('/payments/webhook',
             },
           },
         );
+        const lead = await leads.findOne({ razorpayOrderId: orderId }, { projection: { deepScanForLeadId: 1 } });
+        await applyPaidSideEffects(lead);
       }
       res.json({ ok: true });
     } catch (e) {
@@ -138,7 +155,7 @@ app.get('/', async (_req, res) => {
       db.collection('leads').countDocuments(),
       db.collection('users').countDocuments(),
     ]);
-    res.json({ status: 'ResumeRight backend OK', leads, users, s3: s3Enabled, razorpay: razorpayEnabled });
+    res.json({ status: 'ResumeRight backend OK', leads, users, s3: s3Enabled, razorpay: razorpayEnabled, ai: aiEnabled });
   } catch (e) {
     res.status(503).json({ status: 'DB error', error: e.message });
   }
@@ -441,6 +458,10 @@ app.post('/tools/ats-score', atsLimiter, (req, res, next) => {
         atsStats:     result.stats,
         hadJD:        Boolean(jobDescription),
         keywordMatch: result.keywordMatch || null,
+        // Stored so the paid AI deep-scan can run later without re-parsing the
+        // PDF. Capped to keep the Mongo doc lean.
+        resumeText:     text.slice(0, 20000),
+        jobDescription: jobDescription.slice(0, 6000),
         originalName: req.file.originalname,
         s3Key:        uploaded ? uploaded.key    : null,
         s3Bucket:     uploaded ? uploaded.bucket : null,
@@ -472,6 +493,63 @@ app.post('/tools/ats-score', atsLimiter, (req, res, next) => {
 function safeJsonParse(s) {
   try { return JSON.parse(s); } catch { return null; }
 }
+
+// ═══════════════════════════════════════════════════════════════════════════
+// AI DEEP SCAN — the paid (₹199) upsell on top of the free heuristic scan.
+// Gated on a confirmed payment: deepScanPaid is set server-side by
+// applyPaidSideEffects (verify/webhook), never by the client. Idempotent —
+// the LLM call runs at most once per lead and the result is cached on the doc.
+// ═══════════════════════════════════════════════════════════════════════════
+const deepScanLimiter = rateLimit({ windowMs: 60 * 1000, max: 3, standardHeaders: true });
+
+app.post('/tools/ats-deep-scan', deepScanLimiter, async (req, res, next) => {
+  try {
+    if (!aiEnabled) return bad(res, 'AI deep scan is not available right now', 503);
+
+    const id = trim(req.body.leadId);
+    if (!ObjectId.isValid(id)) return bad(res, 'Invalid scan id', 404);
+
+    const leads = getDb().collection('leads');
+    const lead = await leads.findOne({ _id: new ObjectId(id) });
+    if (!lead || lead.source !== 'ats-tool') return bad(res, 'Scan not found', 404);
+
+    // Entitlement check — the only gate. Cannot be self-granted by the client.
+    if (!lead.deepScanPaid) return bad(res, 'Payment required', 402);
+
+    // Idempotent: never re-run (and re-bill) the LLM if we already have a result.
+    if (lead.deepScanResult) return res.json({ success: true, deepScan: lead.deepScanResult });
+
+    if (!lead.resumeText) return bad(res, 'Resume text unavailable for this scan', 422);
+
+    let deep;
+    try {
+      deep = await deepScanResume({
+        text:           lead.resumeText,
+        heuristic: {
+          score:        lead.atsScore,
+          grade:        lead.atsGrade,
+          breakdown:    lead.atsBreakdown,
+          issues:       lead.atsIssues,
+          keywordMatch: lead.keywordMatch || null,
+        },
+        targetRole:     lead.targetRole || '',
+        jobDescription: lead.jobDescription || '',
+      });
+    } catch (aiErr) {
+      console.error('[ats:deep]', aiErr.message || aiErr);
+      return bad(res, 'Deep scan failed to generate — please WhatsApp us and we will send it manually.', 502);
+    }
+
+    // Persist the result (cache). Leave the lead's status untouched — the paid
+    // record is the separate razorpay-checkout lead, not this scan lead.
+    await leads.updateOne(
+      { _id: lead._id },
+      { $set: { deepScanResult: deep, deepScannedAt: new Date(), updatedAt: new Date() } },
+    );
+
+    res.json({ success: true, deepScan: deep });
+  } catch (e) { next(e); }
+});
 
 // ═══════════════════════════════════════════════════════════════════════════
 // VIDEO PITCH — record-yourself coaching lead magnet
@@ -537,35 +615,94 @@ app.post('/tools/video-pitch', videoLimiter, (req, res, next) => {
 // ═══════════════════════════════════════════════════════════════════════════
 const paymentLimiter = rateLimit({ windowMs: 60 * 1000, max: 10, standardHeaders: true });
 
+// Authoritative product catalog. Price here is the ONLY source of truth for
+// what we charge — the client never dictates the amount (otherwise a tampered
+// request could buy a ₹9,999 package for ₹1). The frontend sends a stable
+// `packageId`; the display label lives here too so leads get a clean name.
+// Recurring `/mo` plans are absent: they route to the lead form, not checkout.
+// Keep ids in sync with the PACKAGES map in index.html.
+const PACKAGES = {
+  'resume-basic':      { label: 'ATS Resume Basic',          price:  999 },
+  'resume-pro':        { label: 'ATS Resume Professional',   price: 1999 },
+  'resume-premium':    { label: 'ATS Resume Premium',        price: 3499 },
+  'naukri-setup':      { label: 'Naukri One-Time Setup',     price:  799 },
+  'naukri-power':      { label: 'Naukri 3-Month Power Plan', price: 3999 },
+  'linkedin-makeover': { label: 'LinkedIn Profile Makeover', price:  999 },
+  'linkedin-growth':   { label: 'LinkedIn Growth Package',   price: 2499 },
+  'bundle-starter':    { label: 'Starter Bundle',            price: 1999 },
+  'bundle-pro':        { label: 'Pro Bundle',                price: 4999 },
+  'bundle-elite':      { label: 'Elite Bundle',              price: 9999 },
+  // Add-on: AI deep-scan upsell after a free ATS scan. Purchased by id only
+  // (never a display label), and tied to the original scan via refLeadId.
+  'ats-deep-scan':     { label: 'AI Deep Scan',              price:  199 },
+};
+
+// Back-compat: a browser holding a cached pre-refactor index.html still POSTs
+// the old display label as `packageName` (e.g. "ATS Resume Basic — ₹999").
+// Reconstruct those labels FROM the catalog (no second source of truth) and
+// map them to ids, dash/whitespace-tolerant. Safe to delete one deploy cycle
+// after the new frontend ships.
+const inrGroup = n => String(n).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+const normPkg  = s => trim(s).replace(/[—–-]+/g, '-').replace(/\s+/g, ' ');
+const LEGACY_LABEL_TO_ID = new Map(
+  Object.entries(PACKAGES).map(([id, { label, price }]) =>
+    [normPkg(`${label} — ₹${inrGroup(price)}`), id]),
+);
+
+function resolvePackage(body) {
+  const id = trim(body.packageId)
+    || LEGACY_LABEL_TO_ID.get(normPkg(body.packageName));
+  return PACKAGES[id] ? { id, ...PACKAGES[id] } : null;
+}
+
 app.post('/payments/order', paymentLimiter, async (req, res, next) => {
   try {
     if (!razorpayEnabled) return bad(res, 'Payments not configured', 503);
 
-    const packageName = trim(req.body.packageName);
-    // Accept either `amount` or `amountInr` for convenience
-    const amount      = Number(req.body.amount ?? req.body.amountInr);
-    const name        = trim(req.body.name);
-    const email       = trim(req.body.email).toLowerCase();
-    const phone       = trim(req.body.phone);
+    const name  = trim(req.body.name);
+    const email = trim(req.body.email).toLowerCase();
+    const phone = trim(req.body.phone);
 
-    if (!packageName)                   return bad(res, 'Package is required');
-    if (!Number.isFinite(amount) || amount < 1 || amount > 100000) {
-      return bad(res, 'Invalid amount');
-    }
+    // Price + label come from the server catalog, NOT the request body. An
+    // unknown package is rejected rather than charged whatever the client sent.
+    const pkg = resolvePackage(req.body);
+    if (!pkg)                           return bad(res, 'Unknown package');
+    const amount = pkg.price;
     if (name && !emailRe.test(email))   return bad(res, 'Valid email is required');
+
+    // The AI deep-scan add-on is bound to an existing ATS-scan lead. Resolve
+    // that reference, reuse its (already-validated) contact info, and remember
+    // which lead to unlock once payment is confirmed.
+    let deepScanForLeadId = null;
+    let contact = { name: name || 'Anonymous', email: email || '', phone: phone || '' };
+    if (pkg.id === 'ats-deep-scan') {
+      const refId = trim(req.body.refLeadId);
+      if (!ObjectId.isValid(refId)) return bad(res, 'Missing scan reference', 400);
+      const ref = await getDb().collection('leads').findOne(
+        { _id: new ObjectId(refId) },
+        { projection: { name: 1, email: 1, phone: 1, source: 1, resumeText: 1, deepScanResult: 1 } },
+      );
+      if (!ref || ref.source !== 'ats-tool') return bad(res, 'Scan not found', 404);
+      if (ref.deepScanResult)                return bad(res, 'Deep scan already purchased', 409);
+      if (!ref.resumeText)                   return bad(res, 'This scan cannot be deep-scanned', 422);
+      deepScanForLeadId = ref._id;
+      contact = { name: ref.name || 'Anonymous', email: ref.email || '', phone: ref.phone || '' };
+    }
 
     // Pre-create a lead in 'Pending Payment' state so even abandoned checkouts
     // are visible in admin (great for re-targeting).
     const leadDoc = {
-      name:    name  || 'Anonymous',
-      email:   email || '',
-      phone:   phone || '',
-      service: packageName,
+      name:    contact.name,
+      email:   contact.email,
+      phone:   contact.phone,
+      service: pkg.label,
+      packageId: pkg.id,
       status:  'Pending Payment',
       amount,
       source:  'razorpay-checkout',
       createdAt: new Date(),
     };
+    if (deepScanForLeadId) leadDoc.deepScanForLeadId = deepScanForLeadId;
     const { insertedId: leadId } = await getDb().collection('leads').insertOne(leadDoc);
 
     let order;
@@ -573,7 +710,7 @@ app.post('/payments/order', paymentLimiter, async (req, res, next) => {
       order = await createRzpOrder({
         amountInr: amount,
         receipt:   `rr_${leadId.toString().slice(-12)}`,
-        notes:     { packageName, leadId: leadId.toString(), email, phone },
+        notes:     { packageId: pkg.id, packageName: pkg.label, leadId: leadId.toString(), email: contact.email, phone: contact.phone },
       });
     } catch (rzpErr) {
       // Razorpay SDK throws plain objects, not Error instances — so err.message
@@ -623,7 +760,8 @@ app.post('/payments/verify', paymentLimiter, async (req, res, next) => {
     const filter = { razorpayOrderId: orderId };
     if (leadId && ObjectId.isValid(leadId)) filter._id = new ObjectId(leadId);
 
-    await getDb().collection('leads').updateOne(filter, {
+    const leads = getDb().collection('leads');
+    await leads.updateOne(filter, {
       $set: {
         status:            'Paid',
         razorpayPaymentId: paymentId,
@@ -632,7 +770,14 @@ app.post('/payments/verify', paymentLimiter, async (req, res, next) => {
       },
     });
 
-    res.json({ success: true });
+    const lead = await leads.findOne(filter, { projection: { deepScanForLeadId: 1 } });
+    await applyPaidSideEffects(lead);
+
+    res.json({
+      success: true,
+      // Surfaced so the frontend can immediately run the unlocked deep scan.
+      deepScanLeadId: lead && lead.deepScanForLeadId ? lead.deepScanForLeadId.toString() : null,
+    });
   } catch (e) { next(e); }
 });
 

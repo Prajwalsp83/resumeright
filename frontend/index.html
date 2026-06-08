@@ -684,6 +684,10 @@ body{
             <ul id="atsStrengthsList"></ul>
           </div>
 
+          <!-- AI deep-scan upsell / result. Filled by renderAtsResult (offer)
+               then replaced by renderDeepScan (result) after purchase. -->
+          <div id="atsDeepScanBox"></div>
+
           <div class="ats-cta">
             <h4>Want us to fix every issue for you?</h4>
             <p>Our writers turn this scan into a recruiter-ready resume in 24–72h. ATS-optimized, keyword-tuned, ₹999 onwards.</p>
@@ -852,7 +856,7 @@ body{
           <li><span class="check">✓</span>Keyword match for 1 target role</li>
           <li><span class="check">✓</span>1 revision · 48h delivery</li>
         </ul>
-        <button class="pkg-btn pkg-btn-outline" onclick="selectPackage('ATS Resume Basic — ₹999')">Get Started →</button>
+        <button class="pkg-btn pkg-btn-outline" onclick="selectPackage('resume-basic')">Get Started →</button>
       </div>
       <div class="pkg popular">
         <div class="popular-tag">⭐ MOST POPULAR</div>
@@ -868,7 +872,7 @@ body{
           <li><span class="check">✓</span>Keywords for 3 target roles</li>
           <li><span class="check">✓</span>2 revisions · 36h delivery</li>
         </ul>
-        <button class="pkg-btn pkg-btn-filled" onclick="selectPackage('ATS Resume Professional — ₹1,999')">Get Started →</button>
+        <button class="pkg-btn pkg-btn-filled" onclick="selectPackage('resume-pro')">Get Started →</button>
       </div>
       <div class="pkg">
         <div class="pkg-icon">👑</div>
@@ -883,7 +887,7 @@ body{
           <li><span class="check">✓</span>Unlimited revisions (7 days)</li>
           <li><span class="check">✓</span>Priority 24h · 30-day update</li>
         </ul>
-        <button class="pkg-btn pkg-btn-outline" onclick="selectPackage('ATS Resume Premium — ₹3,499')">Get Started →</button>
+        <button class="pkg-btn pkg-btn-outline" onclick="selectPackage('resume-premium')">Get Started →</button>
       </div>
     </div>
   </div>
@@ -911,7 +915,7 @@ body{
           <li><span class="check">✓</span>Industry-matched keywords</li>
           <li><span class="check">✓</span>Photo & visibility settings</li>
         </ul>
-        <button class="pkg-btn pkg-btn-outline" onclick="selectPackage('Naukri One-Time Setup — ₹799')">Get Started →</button>
+        <button class="pkg-btn pkg-btn-outline" onclick="selectPackage('naukri-setup')">Get Started →</button>
       </div>
       <div class="pkg popular">
         <div class="popular-tag">🔥 BEST VALUE</div>
@@ -928,7 +932,7 @@ body{
           <li><span class="check">✓</span>Monthly performance report</li>
           <li><span class="check">✓</span>Apply to 20 jobs/week for you</li>
         </ul>
-        <button class="pkg-btn pkg-btn-filled" onclick="selectPackage('Naukri Monthly Management — ₹1,499/mo')">Get Started →</button>
+        <button class="pkg-btn pkg-btn-filled" onclick="selectPackage('naukri-monthly')">Get Started →</button>
       </div>
       <div class="pkg">
         <div class="pkg-icon">⚡</div>
@@ -943,7 +947,7 @@ body{
           <li><span class="check">✓</span>Dedicated account manager</li>
           <li><span class="check">✓</span>Save ₹500 vs monthly</li>
         </ul>
-        <button class="pkg-btn pkg-btn-outline" onclick="selectPackage('Naukri 3-Month Power Plan — ₹3,999')">Get Started →</button>
+        <button class="pkg-btn pkg-btn-outline" onclick="selectPackage('naukri-power')">Get Started →</button>
       </div>
     </div>
   </div>
@@ -971,7 +975,7 @@ body{
           <li><span class="check">✓</span>Banner & profile photo advice</li>
           <li><span class="check">✓</span>All-Star rating achievement</li>
         </ul>
-        <button class="pkg-btn pkg-btn-outline" onclick="selectPackage('LinkedIn Profile Makeover — ₹999')">Get Started →</button>
+        <button class="pkg-btn pkg-btn-outline" onclick="selectPackage('linkedin-makeover')">Get Started →</button>
       </div>
       <div class="pkg popular">
         <div class="popular-tag">⭐ RECOMMENDED</div>
@@ -987,7 +991,7 @@ body{
           <li><span class="check">✓</span>Recruiter outreach templates</li>
           <li><span class="check">✓</span>SSI score improvement plan</li>
         </ul>
-        <button class="pkg-btn pkg-btn-filled" onclick="selectPackage('LinkedIn Growth Package — ₹2,499')">Get Started →</button>
+        <button class="pkg-btn pkg-btn-filled" onclick="selectPackage('linkedin-growth')">Get Started →</button>
       </div>
       <div class="pkg">
         <div class="pkg-icon">🌟</div>
@@ -1002,7 +1006,7 @@ body{
           <li><span class="check">✓</span>Weekly analytics report</li>
           <li><span class="check">✓</span>Job application via LinkedIn</li>
         </ul>
-        <button class="pkg-btn pkg-btn-outline" onclick="selectPackage('LinkedIn Monthly Branding — ₹1,999/mo')">Get Started →</button>
+        <button class="pkg-btn pkg-btn-outline" onclick="selectPackage('linkedin-monthly')">Get Started →</button>
       </div>
     </div>
   </div>
@@ -1029,7 +1033,7 @@ body{
           <li><span class="check">✓</span>LinkedIn Makeover</li>
           <li><span class="check">✓</span>Job application guide</li>
         </ul>
-        <button class="pkg-btn pkg-btn-outline" onclick="selectPackage('Starter Bundle — ₹1,999')">Get Started →</button>
+        <button class="pkg-btn pkg-btn-outline" onclick="selectPackage('bundle-starter')">Get Started →</button>
       </div>
       <div class="pkg popular">
         <div class="popular-tag">🏆 BEST SELLER</div>
@@ -1045,7 +1049,7 @@ body{
           <li><span class="check">✓</span>Cover letter + interview tips</li>
           <li><span class="check">✓</span>Dedicated account manager</li>
         </ul>
-        <button class="pkg-btn pkg-btn-filled" onclick="selectPackage('Pro Bundle — ₹4,999')">Get Started →</button>
+        <button class="pkg-btn pkg-btn-filled" onclick="selectPackage('bundle-pro')">Get Started →</button>
       </div>
       <div class="pkg">
         <div class="pkg-icon">💎</div>
@@ -1061,7 +1065,7 @@ body{
           <li><span class="check">✓</span>Interview coaching (2 sessions)</li>
           <li><span class="check">✓</span>Salary negotiation guide</li>
         </ul>
-        <button class="pkg-btn pkg-btn-outline" onclick="selectPackage('Elite Bundle — ₹9,999')">Get Started →</button>
+        <button class="pkg-btn pkg-btn-outline" onclick="selectPackage('bundle-elite')">Get Started →</button>
       </div>
     </div>
   </div>
@@ -1339,22 +1343,38 @@ function showService(svc){
   document.getElementById('panel-'+svc).classList.add('active');
 }
 
-// Select package — extract the ₹ amount from the label and launch Razorpay.
-// Falls back to scrolling the contact form (for subscription-style plans
-// where checkout isn't the right fit, or if Razorpay isn't configured yet).
-function selectPackage(pkg){
-  // Match first "₹<digits>" in the label: "ATS Resume Basic — ₹999" → 999
-  const m = pkg.match(/₹\s*([\d,]+)/);
-  const amount = m ? Number(m[1].replace(/,/g,'')) : 0;
-  // Monthly-recurring plans aren't one-time — drop them to the lead form.
-  const isRecurring = /\/mo\b|monthly/i.test(pkg);
-  if (amount > 0 && !isRecurring) {
-    buyPackage(pkg, amount);
+// Product catalog. The id is the contract with the backend — checkout sends
+// the id, and the SERVER decides the price (see PACKAGES in backend/app.js).
+// The label here is display-only: editing the ₹ text never changes what we
+// charge. Recurring plans route to the lead form instead of checkout.
+const PACKAGES = {
+  'resume-basic':      { label:'ATS Resume Basic — ₹999' },
+  'resume-pro':        { label:'ATS Resume Professional — ₹1,999' },
+  'resume-premium':    { label:'ATS Resume Premium — ₹3,499' },
+  'naukri-setup':      { label:'Naukri One-Time Setup — ₹799' },
+  'naukri-power':      { label:'Naukri 3-Month Power Plan — ₹3,999' },
+  'linkedin-makeover': { label:'LinkedIn Profile Makeover — ₹999' },
+  'linkedin-growth':   { label:'LinkedIn Growth Package — ₹2,499' },
+  'bundle-starter':    { label:'Starter Bundle — ₹1,999' },
+  'bundle-pro':        { label:'Pro Bundle — ₹4,999' },
+  'bundle-elite':      { label:'Elite Bundle — ₹9,999' },
+  'naukri-monthly':    { label:'Naukri Monthly Management — ₹1,499/mo', recurring:true },
+  'linkedin-monthly':  { label:'LinkedIn Monthly Branding — ₹1,999/mo', recurring:true },
+  // Add-on, purchased from the ATS result card via buyDeepScan() (not a tile).
+  'ats-deep-scan':     { label:'AI Deep Scan — ₹199' },
+};
+
+// Select package by id → launch Razorpay (one-time) or route to the lead form
+// (recurring / unknown). The amount is never computed here anymore.
+function selectPackage(id){
+  const pkg = PACKAGES[id];
+  if (pkg && !pkg.recurring) {
+    buyPackage(id);
     return;
   }
-  // Fallback: prefill the lead form and scroll.
+  // Recurring plans, unknown ids, or Razorpay-not-configured: prefill + scroll.
   const fs = document.getElementById('f-service');
-  if (fs) fs.value = pkg;
+  if (fs && pkg) fs.value = pkg.label;
   const target = document.getElementById('quickCapture') || document.getElementById('contact');
   if (target) target.scrollIntoView({behavior:'smooth'});
 }
@@ -1653,7 +1673,13 @@ function cycleScanMessages(){
   },550);
 }
 
+// AI deep-scan (paid ₹199 add-on) state — the lead id of the most recent scan,
+// used to tie the add-on purchase back to this resume.
+let lastAtsLeadId=null;
+let deepScanBusy=false;
+
 function renderAtsResult(d){
+  lastAtsLeadId=d.id||null;
   // Score circle animation
   const num=document.getElementById('atsNum');
   const circle=document.getElementById('atsProgCircle');
@@ -1751,6 +1777,134 @@ function renderAtsResult(d){
       strUl.appendChild(li);
     });
   }
+
+  // AI deep-scan upsell (paid ₹199 add-on)
+  renderDeepScanOffer(target);
+}
+
+// ─── AI DEEP SCAN (paid ₹199 add-on) ────────────────────────────────────────
+// Offer card → Razorpay checkout (packageId 'ats-deep-scan' + refLeadId) →
+// on verified payment, POST /tools/ats-deep-scan and render the result.
+function renderDeepScanOffer(score){
+  const box=document.getElementById('atsDeepScanBox');
+  if(!box)return;
+  if(!lastAtsLeadId){box.innerHTML='';return;} // no lead to bind the purchase to
+  const hook=(score<60)
+    ? 'Your score has clear gaps. Get an AI-written, line-by-line fix list.'
+    : 'Push from good to interview-ready with AI-written rewrites.';
+  box.innerHTML=
+    '<div style="border:1px solid rgba(232,160,32,.45);background:rgba(232,160,32,.07);border-radius:14px;padding:18px 20px;margin:18px 0;">'
+    +'<div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">'
+    +'<span style="background:var(--gold,#E8A020);color:#0B1628;font-weight:800;font-size:11px;padding:3px 8px;border-radius:6px;letter-spacing:.5px;">AI</span>'
+    +'<strong style="font-size:17px;">Unlock AI Deep Scan</strong>'
+    +'<span style="margin-left:auto;font-weight:800;color:var(--gold,#E8A020);">₹199</span></div>'
+    +'<p style="margin:0 0 14px;opacity:.85;font-size:14px;line-height:1.55;">'+hook
+    +' Prioritised fixes, before/after bullet rewrites, keyword gaps, and a projected score — generated for your exact resume.</p>'
+    +'<button type="button" class="ats-cta-primary" id="adsBtn" onclick="buyDeepScan()">Unlock for ₹199 →</button>'
+    +'</div>';
+}
+
+async function buyDeepScan(){
+  if(deepScanBusy)return;
+  if(!lastAtsLeadId){alert('Please run a scan first.');return;}
+  const btn=document.getElementById('adsBtn');
+  deepScanBusy=true;
+  if(btn){btn.disabled=true;btn.textContent='Starting checkout…';}
+  try{
+    await loadRzpSdk();
+    // Contact info is taken server-side from the original scan — no re-prompt.
+    const r=await fetch(API+'/payments/order',{
+      method:'POST',
+      headers:{'Content-Type':'application/json',...(authToken?{Authorization:`Bearer ${authToken}`}:{})},
+      body:JSON.stringify({packageId:'ats-deep-scan',refLeadId:lastAtsLeadId}),
+    });
+    const d=await r.json();
+    if(!r.ok)throw new Error(d.error||('HTTP '+r.status));
+    const opts={
+      key:d.keyId, amount:d.amount, currency:d.currency,
+      name:'ResumeRight', description:'AI Deep Scan', order_id:d.orderId,
+      theme:{color:'#E8A020'},
+      handler:async function(resp){
+        try{
+          const v=await fetch(API+'/payments/verify',{
+            method:'POST', headers:{'Content-Type':'application/json'},
+            body:JSON.stringify({
+              razorpay_order_id:resp.razorpay_order_id,
+              razorpay_payment_id:resp.razorpay_payment_id,
+              razorpay_signature:resp.razorpay_signature,
+              leadId:d.leadId,
+            }),
+          });
+          const vd=await v.json();
+          if(!v.ok||!vd.success)throw new Error(vd.error||'Verification failed');
+          runDeepScan(vd.deepScanLeadId||lastAtsLeadId);
+        }catch(e){
+          alert('Payment received but unlock failed. Please WhatsApp +91-97312-09180 with your payment ID: '+resp.razorpay_payment_id);
+        }
+      },
+      modal:{ondismiss:function(){
+        deepScanBusy=false;
+        const b=document.getElementById('adsBtn');
+        if(b){b.disabled=false;b.textContent='Unlock for ₹199 →';}
+      }},
+    };
+    new Razorpay(opts).open();
+  }catch(e){
+    alert('Could not start checkout: '+e.message);
+  }finally{
+    deepScanBusy=false;
+  }
+}
+
+async function runDeepScan(leadId){
+  const box=document.getElementById('atsDeepScanBox');
+  if(box)box.innerHTML='<div style="border:1px solid rgba(232,160,32,.45);background:rgba(232,160,32,.07);border-radius:14px;padding:18px 20px;margin:18px 0;">'
+    +'<strong>Generating your AI deep scan…</strong>'
+    +'<p style="margin:6px 0 0;opacity:.8;font-size:14px;">This takes ~20–40 seconds. Please keep this page open.</p></div>';
+  try{
+    const r=await fetch(API+'/tools/ats-deep-scan',{
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({leadId}),
+    });
+    const d=await r.json();
+    if(!r.ok||!d.success)throw new Error(d.error||('HTTP '+r.status));
+    renderDeepScan(d.deepScan);
+  }catch(e){
+    if(box)box.innerHTML='<div style="border:1px solid rgba(239,68,68,.5);background:rgba(239,68,68,.08);border-radius:14px;padding:18px 20px;margin:18px 0;">'
+      +'<strong>Deep scan could not be generated.</strong>'
+      +'<p style="margin:6px 0 0;opacity:.85;font-size:14px;">'+escapeHtml(e.message)+' — WhatsApp +91-97312-09180 and we will send it manually.</p></div>';
+  }
+}
+
+function renderDeepScan(ds){
+  const box=document.getElementById('atsDeepScanBox');
+  if(!box||!ds)return;
+  const fixes=(ds.topFixes||[]).map(f=>
+    '<li style="margin:0 0 12px;"><strong>'+escapeHtml(f.title)+'</strong>'
+    +'<br><span style="opacity:.8;">'+escapeHtml(f.why)+'</span>'
+    +'<br><span style="color:var(--gold,#E8A020);">→ '+escapeHtml(f.action)+'</span></li>'
+  ).join('');
+  const bullets=(ds.rewrittenBullets||[]).map(b=>
+    '<div style="margin:0 0 12px;font-size:14px;line-height:1.5;">'
+    +'<div style="color:#F87171;">✗ '+escapeHtml(b.before)+'</div>'
+    +'<div style="color:#34D399;">✓ '+escapeHtml(b.after)+'</div></div>'
+  ).join('');
+  const kw=(ds.missingKeywords&&ds.missingKeywords.length)
+    ? '<p style="font-size:14px;"><strong>Missing keywords:</strong> <span style="color:#FBBF24;">'+escapeHtml(ds.missingKeywords.join(', '))+'</span></p>' : '';
+  const proj=Number.isFinite(ds.estimatedScoreAfterFixes)
+    ? '<span style="margin-left:auto;font-weight:800;color:var(--gold,#E8A020);">Projected: '+ds.estimatedScoreAfterFixes+'/100</span>' : '';
+  box.innerHTML=
+    '<div style="border:1px solid rgba(232,160,32,.45);background:rgba(232,160,32,.07);border-radius:14px;padding:20px;margin:18px 0;">'
+    +'<div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">'
+    +'<span style="background:var(--gold,#E8A020);color:#0B1628;font-weight:800;font-size:11px;padding:3px 8px;border-radius:6px;letter-spacing:.5px;">AI</span>'
+    +'<strong style="font-size:17px;">Your AI Deep Scan</strong>'+proj+'</div>'
+    +'<p style="font-size:15px;line-height:1.55;">'+escapeHtml(ds.summary||'')+'</p>'
+    +(ds.roleFit?'<p style="font-size:14px;opacity:.9;"><strong>Role fit:</strong> '+escapeHtml(ds.roleFit)+'</p>':'')
+    +(fixes?'<div class="ats-list-title bad" style="margin-top:12px;">Priority fixes</div><ul style="list-style:none;padding:0;margin:8px 0;font-size:14px;line-height:1.5;">'+fixes+'</ul>':'')
+    +(bullets?'<div class="ats-list-title good" style="margin-top:12px;">Rewritten bullets</div><div style="margin-top:8px;">'+bullets+'</div>':'')
+    +kw
+    +'</div>';
+  box.scrollIntoView({behavior:'smooth',block:'nearest'});
 }
 
 function escapeHtml(s){
@@ -1758,6 +1912,8 @@ function escapeHtml(s){
 }
 
 function resetAtsScan(){
+  lastAtsLeadId=null;
+  const dsb=document.getElementById('atsDeepScanBox');if(dsb)dsb.innerHTML='';
   ['qc-email','qc-name','qc-phone','qc-jd'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
   const sel=document.getElementById('qc-target');if(sel)sel.value='';
   const fi=document.getElementById('qc-resume');if(fi)fi.value='';
@@ -2089,7 +2245,14 @@ function loadRzpSdk(){
     document.head.appendChild(s);
   });
 }
-async function buyPackage(packageName,amountInr){
+// Guards against a rapid double-click firing two orders (→ two Pending Payment
+// leads + two Razorpay orders). The blocking prompts below can't be re-entered
+// while open, so we lock only around the async order-creation window.
+let checkoutBusy=false;
+async function buyPackage(packageId){
+  if(checkoutBusy)return;
+  const pkg=PACKAGES[packageId];
+  if(!pkg)return;
   // Prefill from logged-in user if available, else ask the user
   let name=currentUser?.name||prompt('Your name:');
   if(!name)return;
@@ -2097,12 +2260,14 @@ async function buyPackage(packageName,amountInr){
   if(!email)return;
   let phone=prompt('WhatsApp number (for delivery updates):');
   if(!phone)return;
+  checkoutBusy=true;
   try{
     await loadRzpSdk();
+    // Send only the id — the server maps id → authoritative price.
     const r=await fetch(API+'/payments/order',{
       method:'POST',
       headers:{'Content-Type':'application/json',...(authToken?{Authorization:`Bearer ${authToken}`}:{})},
-      body:JSON.stringify({packageName,amountInr,name,email,phone}),
+      body:JSON.stringify({packageId,name,email,phone}),
     });
     const d=await r.json();
     if(!r.ok)throw new Error(d.error||`HTTP ${r.status}`);
@@ -2111,7 +2276,7 @@ async function buyPackage(packageName,amountInr){
       amount:d.amount,
       currency:d.currency,
       name:'ResumeRight',
-      description:packageName,
+      description:pkg.label,
       order_id:d.orderId,
       prefill:{name,email,contact:phone},
       theme:{color:'#E8A020'},
@@ -2139,6 +2304,9 @@ async function buyPackage(packageName,amountInr){
     new Razorpay(opts).open();
   }catch(e){
     alert('Could not start checkout: '+e.message);
+  }finally{
+    // Modal is now up (it overlays the page) or we errored — release the lock.
+    checkoutBusy=false;
   }
 }
 </script>
