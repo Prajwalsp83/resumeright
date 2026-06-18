@@ -1,7 +1,9 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, Pressable, ScrollView, ActivityIndicator, StyleSheet } from 'react-native';
+import { View, Text, ScrollView, StyleSheet } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
-import { colors } from '../theme';
+import { Ionicons } from '@expo/vector-icons';
+import { colors, radius, space } from '../theme';
+import { Header, Card, Field, GradientButton } from '../components/UI';
 import { videoPitch } from '../api';
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -9,14 +11,12 @@ const PHONE_RE = /^[0-9+\s\-()]{7,20}$/;
 const MAX_SECONDS = 90;
 
 export default function VideoPitchScreen() {
-  const [name, setName]   = useState('');
-  const [email, setEmail] = useState('');
-  const [phone, setPhone] = useState('');
-  const [role, setRole]   = useState('');
-  const [clip, setClip]   = useState(null);
-  const [busy, setBusy]   = useState(false);
-  const [err, setErr]     = useState('');
-  const [done, setDone]   = useState(false);
+  const [form, setForm] = useState({ name: '', email: '', phone: '', role: '' });
+  const [clip, setClip] = useState(null);
+  const [busy, setBusy] = useState(false);
+  const [err, setErr]   = useState('');
+  const [done, setDone] = useState(false);
+  const set = (k) => (v) => setForm((f) => ({ ...f, [k]: v }));
 
   async function record() {
     const perm = await ImagePicker.requestCameraPermissionsAsync();
@@ -24,78 +24,75 @@ export default function VideoPitchScreen() {
     const res = await ImagePicker.launchCameraAsync({ mediaTypes: ['videos'], videoMaxDuration: MAX_SECONDS, quality: 0.7 });
     if (!res.canceled && res.assets?.[0]) { setClip(res.assets[0]); setErr(''); }
   }
-
   async function upload() {
     const res = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['videos'], quality: 0.7 });
     if (!res.canceled && res.assets?.[0]) { setClip(res.assets[0]); setErr(''); }
   }
-
   async function submit() {
     setErr('');
-    if (!name.trim())          return setErr('Please enter your name.');
-    if (!PHONE_RE.test(phone)) return setErr('Please enter a valid WhatsApp number.');
-    if (!EMAIL_RE.test(email)) return setErr('Please enter a valid email.');
-    if (!clip)                 return setErr('Please record or upload a short video.');
+    if (!form.name.trim())          return setErr('Please enter your name.');
+    if (!PHONE_RE.test(form.phone)) return setErr('Please enter a valid WhatsApp number.');
+    if (!EMAIL_RE.test(form.email)) return setErr('Please enter a valid email.');
+    if (!clip)                      return setErr('Please record or upload a short video.');
     setBusy(true);
     try {
-      await videoPitch({ file: clip, name: name.trim(), email: email.trim(), phone: phone.trim(), targetRole: role.trim() });
+      await videoPitch({ file: clip, name: form.name.trim(), email: form.email.trim(), phone: form.phone.trim(), targetRole: form.role.trim() });
       setDone(true);
-    } catch (e) {
-      setErr('Upload failed: ' + e.message);
-    } finally {
-      setBusy(false);
-    }
+    } catch (e) { setErr('Upload failed: ' + e.message); }
+    finally { setBusy(false); }
   }
 
   if (done) {
     return (
-      <View style={[s.screen, s.center]}>
-        <Text style={s.bigCheck}>✅</Text>
-        <Text style={s.h2}>Pitch received!</Text>
-        <Text style={s.sub}>Our coach will review it and WhatsApp you interview-prep feedback.</Text>
+      <View style={s.screen}><Header />
+        <View style={s.center}>
+          <Ionicons name="checkmark-circle" size={64} color={colors.green} />
+          <Text style={s.h2}>Pitch received!</Text>
+          <Text style={[s.sub, { textAlign: 'center' }]}>A coach will review it and WhatsApp you interview-prep feedback.</Text>
+        </View>
       </View>
     );
   }
 
   return (
-    <ScrollView style={s.screen} contentContainerStyle={s.content} keyboardShouldPersistTaps="handled">
-      <Text style={s.h2}>Record a 60-second pitch</Text>
-      <Text style={s.sub}>Introduce yourself like you would in an interview. A coach reviews it and sends feedback.</Text>
+    <ScrollView style={s.screen} contentContainerStyle={{ paddingBottom: 32 }} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
+      <Header />
+      <View style={s.body}>
+        <Text style={s.h2}>Interview coaching</Text>
+        <Text style={s.sub}>Record a 60-second pitch. A coach reviews it and sends you feedback.</Text>
 
-      <TextInput style={s.input} placeholder="Full name" placeholderTextColor={colors.muted} value={name} onChangeText={setName} />
-      <TextInput style={s.input} placeholder="Email" placeholderTextColor={colors.muted} value={email} onChangeText={setEmail} keyboardType="email-address" autoCapitalize="none" />
-      <TextInput style={s.input} placeholder="WhatsApp number" placeholderTextColor={colors.muted} value={phone} onChangeText={setPhone} keyboardType="phone-pad" />
-      <TextInput style={s.input} placeholder="Target role (optional)" placeholderTextColor={colors.muted} value={role} onChangeText={setRole} />
+        <Card style={{ marginTop: 16 }}>
+          <Field label="FULL NAME" value={form.name} onChangeText={set('name')} placeholder="Your name" />
+          <Field label="EMAIL" value={form.email} onChangeText={set('email')} placeholder="you@email.com" keyboardType="email-address" autoCapitalize="none" />
+          <Field label="WHATSAPP NUMBER" value={form.phone} onChangeText={set('phone')} placeholder="+91…" keyboardType="phone-pad" />
+          <Field label="TARGET ROLE (OPTIONAL)" value={form.role} onChangeText={set('role')} placeholder="e.g. Product Manager" />
 
-      <View style={s.btnRow}>
-        <Pressable style={[s.half, s.outline]} onPress={record}><Text style={s.outlineTxt}>🎥 Record</Text></Pressable>
-        <Pressable style={[s.half, s.outline]} onPress={upload}><Text style={s.outlineTxt}>📁 Upload</Text></Pressable>
+          <View style={s.btnRow}>
+            <GradientButton title="🎥 Record" variant="ghost" onPress={record} style={{ flex: 1 }} />
+            <GradientButton title="📁 Upload" variant="ghost" onPress={upload} style={{ flex: 1 }} />
+          </View>
+          {!!clip && (
+            <View style={s.clip}>
+              <Ionicons name="checkmark-circle" size={16} color={colors.green} />
+              <Text style={s.clipTxt}>Clip ready{clip.duration ? ` · ${Math.round(clip.duration / 1000)}s` : ''}</Text>
+            </View>
+          )}
+          {!!err && <Text style={s.err}>{err}</Text>}
+          <GradientButton title="Submit pitch →" loading={busy} onPress={submit} style={{ marginTop: 14 }} />
+        </Card>
       </View>
-      {!!clip && <Text style={s.clip}>✓ Clip ready{clip.duration ? ` · ${Math.round(clip.duration / 1000)}s` : ''}</Text>}
-      {!!err && <Text style={s.err}>{err}</Text>}
-
-      <Pressable style={[s.primary, busy && s.disabled]} onPress={submit} disabled={busy}>
-        {busy ? <ActivityIndicator color={colors.navy} /> : <Text style={s.primaryTxt}>Submit pitch →</Text>}
-      </Pressable>
     </ScrollView>
   );
 }
 
 const s = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: colors.navy },
-  content: { padding: 22, paddingBottom: 48 },
-  center: { alignItems: 'center', justifyContent: 'center', padding: 30 },
-  bigCheck: { fontSize: 56, marginBottom: 12 },
-  h2: { color: colors.white, fontSize: 22, fontWeight: '800', marginBottom: 6, textAlign: 'center' },
-  sub: { color: colors.muted, fontSize: 14, marginBottom: 18, textAlign: 'center', lineHeight: 20 },
-  input: { backgroundColor: colors.card, borderColor: colors.border, borderWidth: 1, borderRadius: 10, padding: 13, color: colors.white, fontSize: 15, marginBottom: 12 },
+  screen: { flex: 1, backgroundColor: colors.bg },
+  body: { paddingHorizontal: space.lg },
+  center: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 30, gap: 10 },
+  h2: { color: colors.white, fontSize: 24, fontWeight: '800', marginTop: 8 },
+  sub: { color: colors.muted, fontSize: 13.5, lineHeight: 20, marginTop: 6 },
   btnRow: { flexDirection: 'row', gap: 12, marginTop: 4 },
-  half: { flex: 1 },
-  outline: { borderColor: colors.border, borderWidth: 1.5, borderRadius: 50, paddingVertical: 14, alignItems: 'center' },
-  outlineTxt: { color: colors.white, fontWeight: '700', fontSize: 15 },
-  clip: { color: colors.green, marginTop: 12, fontWeight: '600' },
+  clip: { flexDirection: 'row', alignItems: 'center', gap: 7, marginTop: 14 },
+  clipTxt: { color: colors.green, fontWeight: '700', fontSize: 13 },
   err: { color: colors.red, fontSize: 13, marginTop: 12 },
-  primary: { backgroundColor: colors.gold, borderRadius: 50, paddingVertical: 15, alignItems: 'center', marginTop: 18 },
-  primaryTxt: { color: colors.navy, fontWeight: '800', fontSize: 16 },
-  disabled: { opacity: 0.6 },
 });

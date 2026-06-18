@@ -1,155 +1,131 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, Pressable, ScrollView, ActivityIndicator, StyleSheet } from 'react-native';
+import { View, Text, ScrollView, Pressable, StyleSheet } from 'react-native';
 import * as DocumentPicker from 'expo-document-picker';
-import { colors, severityColor } from '../theme';
+import { Ionicons } from '@expo/vector-icons';
+import { colors, radius, space, severityColor } from '../theme';
+import { Header, AIBadge, Card, Field, GradientButton, Pill } from '../components/UI';
 import { atsScore } from '../api';
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const PHONE_RE = /^[0-9+\s\-()]{7,20}$/;
 
-export default function AtsScanScreen() {
-  const [name, setName]   = useState('');
-  const [email, setEmail] = useState('');
-  const [phone, setPhone] = useState('');
-  const [role, setRole]   = useState('');
-  const [file, setFile]   = useState(null);
-  const [busy, setBusy]   = useState(false);
-  const [err, setErr]     = useState('');
+export default function AtsScanScreen({ navigation }) {
+  const [form, setForm] = useState({ name: '', email: '', phone: '', role: '' });
+  const [file, setFile] = useState(null);
+  const [busy, setBusy] = useState(false);
+  const [err, setErr]   = useState('');
   const [result, setResult] = useState(null);
+  const set = (k) => (v) => setForm((f) => ({ ...f, [k]: v }));
 
   async function pickPdf() {
     const res = await DocumentPicker.getDocumentAsync({ type: 'application/pdf', copyToCacheDirectory: true });
-    if (!res.canceled && res.assets?.[0]) setFile(res.assets[0]);
+    if (!res.canceled && res.assets?.[0]) { setFile(res.assets[0]); setErr(''); }
   }
 
   async function run() {
     setErr('');
-    if (!name.trim())            return setErr('Please enter your name.');
-    if (!PHONE_RE.test(phone))   return setErr('Please enter a valid WhatsApp number.');
-    if (!EMAIL_RE.test(email))   return setErr('Please enter a valid email.');
-    if (!file)                   return setErr('Please attach your resume PDF.');
+    if (!form.name.trim())          return setErr('Please enter your name.');
+    if (!PHONE_RE.test(form.phone)) return setErr('Please enter a valid WhatsApp number.');
+    if (!EMAIL_RE.test(form.email)) return setErr('Please enter a valid email.');
+    if (!file)                      return setErr('Please attach your resume PDF.');
     setBusy(true);
     try {
-      const d = await atsScore({ file, name: name.trim(), email: email.trim(), phone: phone.trim(), targetRole: role.trim() });
-      setResult(d);
-    } catch (e) {
-      setErr('Scan failed: ' + e.message);
-    } finally {
-      setBusy(false);
-    }
+      setResult(await atsScore({ file, name: form.name.trim(), email: form.email.trim(), phone: form.phone.trim(), targetRole: form.role.trim() }));
+    } catch (e) { setErr('Scan failed: ' + e.message); }
+    finally { setBusy(false); }
   }
 
-  if (result) return <ResultCard d={result} onReset={() => { setResult(null); setFile(null); }} />;
+  if (result) return <Result d={result} onReset={() => { setResult(null); setFile(null); }} navigation={navigation} />;
 
   return (
-    <ScrollView style={s.screen} contentContainerStyle={s.content} keyboardShouldPersistTaps="handled">
-      <Text style={s.h2}>Scan your resume against <Text style={s.gold}>real ATS rules</Text></Text>
-      <Text style={s.sub}>Free · instant · no credit card. We'll WhatsApp you the fixes.</Text>
+    <ScrollView style={s.screen} contentContainerStyle={{ paddingBottom: 32 }} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
+      <Header ai />
+      <View style={s.body}>
+        <Text style={s.h2}>AI ATS Scan</Text>
+        <Text style={s.sub}>Free · instant. See exactly why bots reject your resume — and how to fix it.</Text>
 
-      <Field label="Full name" value={name} onChangeText={setName} placeholder="Your name" />
-      <Field label="Email" value={email} onChangeText={setEmail} placeholder="you@email.com" keyboardType="email-address" autoCapitalize="none" />
-      <Field label="WhatsApp number" value={phone} onChangeText={setPhone} placeholder="+91…" keyboardType="phone-pad" />
-      <Field label="Target role (optional)" value={role} onChangeText={setRole} placeholder="e.g. Backend Engineer" />
+        <Card style={{ marginTop: 18 }}>
+          <Field label="FULL NAME" value={form.name} onChangeText={set('name')} placeholder="Your name" />
+          <Field label="EMAIL" value={form.email} onChangeText={set('email')} placeholder="you@email.com" keyboardType="email-address" autoCapitalize="none" />
+          <Field label="WHATSAPP NUMBER" value={form.phone} onChangeText={set('phone')} placeholder="+91…" keyboardType="phone-pad" />
+          <Field label="TARGET ROLE (OPTIONAL)" value={form.role} onChangeText={set('role')} placeholder="e.g. Backend Engineer" />
 
-      <Pressable style={s.file} onPress={pickPdf}>
-        <Text style={s.fileTxt}>{file ? `📄 ${file.name}` : 'Tap to attach your resume (PDF)'}</Text>
-      </Pressable>
+          <Pressable style={[s.file, file && s.fileOn]} onPress={pickPdf}>
+            <Ionicons name={file ? 'document-text' : 'cloud-upload-outline'} size={22} color={file ? colors.gold : colors.muted} />
+            <Text style={s.fileTxt} numberOfLines={1}>{file ? file.name : 'Tap to attach resume (PDF)'}</Text>
+          </Pressable>
 
-      {!!err && <Text style={s.err}>{err}</Text>}
-
-      <Pressable style={[s.primary, busy && s.disabled]} onPress={run} disabled={busy}>
-        {busy ? <ActivityIndicator color={colors.navy} /> : <Text style={s.primaryTxt}>Scan My Resume →</Text>}
-      </Pressable>
+          {!!err && <Text style={s.err}>{err}</Text>}
+          <GradientButton title="Analyze with AI →" variant="ai" loading={busy} onPress={run} style={{ marginTop: 4 }} />
+        </Card>
+      </View>
     </ScrollView>
   );
 }
 
-function ResultCard({ d, onReset }) {
+function Result({ d, onReset, navigation }) {
   const score = Math.max(0, Math.min(100, d.score || 0));
-  const grade = d.grade || '–';
-  const scoreColor = score >= 80 ? colors.green : score >= 60 ? colors.gold : colors.red;
+  const c = score >= 80 ? colors.green : score >= 60 ? colors.gold : colors.red;
   return (
-    <ScrollView style={s.screen} contentContainerStyle={s.content}>
-      <View style={s.scoreWrap}>
-        <Text style={[s.score, { color: scoreColor }]}>{score}</Text>
-        <Text style={s.scoreOf}>/ 100 · Grade {grade}</Text>
-      </View>
-      {!!d.keywordMatch && (
-        <Text style={s.kw}>{d.keywordMatch.percent}% keyword match — {d.keywordMatch.matched}/{d.keywordMatch.total} found</Text>
-      )}
+    <ScrollView style={s.screen} contentContainerStyle={{ paddingBottom: 32 }} showsVerticalScrollIndicator={false}>
+      <Header ai />
+      <View style={s.body}>
+        <Card glow style={{ alignItems: 'center' }}>
+          <AIBadge label="ATS REPORT" />
+          <Text style={[s.score, { color: c }]}>{score}</Text>
+          <Text style={s.scoreOf}>out of 100 · Grade {d.grade || '–'}</Text>
+          {!!d.keywordMatch && <Pill color={colors.gold}>{d.keywordMatch.percent}% keyword match</Pill>}
+        </Card>
 
-      {Array.isArray(d.issues) && d.issues.length > 0 && (
-        <>
-          <Text style={s.listTitle}>What's holding you back</Text>
-          {d.issues.map((it, i) => (
-            <View key={i} style={s.issueRow}>
-              <View style={[s.tag, { backgroundColor: (severityColor[it.severity] || colors.muted) + '22' }]}>
-                <Text style={[s.tagTxt, { color: severityColor[it.severity] || colors.muted }]}>{it.severity}</Text>
+        {Array.isArray(d.issues) && d.issues.length > 0 && (
+          <Card style={{ marginTop: 14 }}>
+            <Text style={s.cardTitle}>What's holding you back</Text>
+            {d.issues.map((it, i) => (
+              <View key={i} style={s.issueRow}>
+                <View style={[s.dot, { backgroundColor: severityColor[it.severity] || colors.muted }]} />
+                <Text style={s.issueMsg}>{it.message}</Text>
               </View>
-              <Text style={s.issueMsg}>{it.message}</Text>
-            </View>
-          ))}
-        </>
-      )}
+            ))}
+          </Card>
+        )}
 
-      {Array.isArray(d.strengths) && d.strengths.length > 0 && (
-        <>
-          <Text style={[s.listTitle, { color: colors.green }]}>What's working</Text>
-          {d.strengths.map((str, i) => <Text key={i} style={s.strength}>✓ {str}</Text>)}
-        </>
-      )}
+        {Array.isArray(d.strengths) && d.strengths.length > 0 && (
+          <Card style={{ marginTop: 14 }}>
+            <Text style={[s.cardTitle, { color: colors.green }]}>What's working</Text>
+            {d.strengths.map((str, i) => (
+              <View key={i} style={s.issueRow}>
+                <Ionicons name="checkmark-circle" size={16} color={colors.green} style={{ marginRight: 8, marginTop: 1 }} />
+                <Text style={s.issueMsg}>{str}</Text>
+              </View>
+            ))}
+          </Card>
+        )}
 
-      <View style={s.ctaBox}>
-        <Text style={s.ctaH}>Want us to fix every issue for you?</Text>
-        <Text style={s.ctaP}>Our writers turn this into a recruiter-ready resume in 24–72h, ₹999 onwards.</Text>
+        <Card style={{ marginTop: 14 }}>
+          <Text style={s.cardTitle}>Get every issue fixed for you</Text>
+          <Text style={s.sub}>Our writers turn this into a recruiter-ready resume in 24–72h, ₹999 onwards.</Text>
+          <GradientButton title="See packages →" onPress={() => navigation.navigate('Plans')} style={{ marginTop: 14 }} />
+          <GradientButton title="Scan another resume" variant="ghost" onPress={onReset} style={{ marginTop: 10 }} />
+        </Card>
       </View>
-      <Pressable style={s.outline} onPress={onReset}>
-        <Text style={s.outlineTxt}>Scan another resume</Text>
-      </Pressable>
     </ScrollView>
-  );
-}
-
-function Field(props) {
-  return (
-    <View style={{ marginBottom: 12 }}>
-      <Text style={s.label}>{props.label}</Text>
-      <TextInput
-        {...props}
-        style={s.input}
-        placeholderTextColor={colors.muted}
-      />
-    </View>
   );
 }
 
 const s = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: colors.navy },
-  content: { padding: 22, paddingBottom: 48 },
-  h2: { color: colors.white, fontSize: 22, fontWeight: '800', marginBottom: 6 },
-  gold: { color: colors.gold },
-  sub: { color: colors.muted, fontSize: 14, marginBottom: 20 },
-  label: { color: colors.muted, fontSize: 12, fontWeight: '600', marginBottom: 6 },
-  input: { backgroundColor: colors.card, borderColor: colors.border, borderWidth: 1, borderRadius: 10, padding: 13, color: colors.white, fontSize: 15 },
-  file: { backgroundColor: colors.card, borderColor: colors.gold, borderWidth: 1, borderStyle: 'dashed', borderRadius: 12, padding: 18, alignItems: 'center', marginTop: 6, marginBottom: 14 },
-  fileTxt: { color: colors.white, fontSize: 14 },
-  err: { color: colors.red, fontSize: 13, marginBottom: 12 },
-  primary: { backgroundColor: colors.gold, borderRadius: 50, paddingVertical: 15, alignItems: 'center' },
-  primaryTxt: { color: colors.navy, fontWeight: '800', fontSize: 16 },
-  disabled: { opacity: 0.6 },
-  scoreWrap: { alignItems: 'center', marginVertical: 18 },
-  score: { fontSize: 72, fontWeight: '800', lineHeight: 78 },
-  scoreOf: { color: colors.muted, fontSize: 15 },
-  kw: { color: colors.gold2, textAlign: 'center', marginBottom: 12, fontWeight: '600' },
-  listTitle: { color: colors.red, fontSize: 15, fontWeight: '700', marginTop: 18, marginBottom: 10 },
-  issueRow: { flexDirection: 'row', marginBottom: 12, alignItems: 'flex-start' },
-  tag: { borderRadius: 6, paddingHorizontal: 8, paddingVertical: 2, marginRight: 10 },
-  tagTxt: { fontSize: 10, fontWeight: '700', textTransform: 'uppercase' },
-  issueMsg: { color: colors.white, fontSize: 13, flex: 1, lineHeight: 19 },
-  strength: { color: colors.muted, fontSize: 13, marginBottom: 8, lineHeight: 19 },
-  ctaBox: { backgroundColor: colors.card, borderColor: colors.border, borderWidth: 1, borderRadius: 16, padding: 18, marginTop: 24, marginBottom: 12 },
-  ctaH: { color: colors.white, fontSize: 16, fontWeight: '700', marginBottom: 6 },
-  ctaP: { color: colors.muted, fontSize: 13, lineHeight: 19 },
-  outline: { borderColor: colors.border, borderWidth: 1.5, borderRadius: 50, paddingVertical: 14, alignItems: 'center' },
-  outlineTxt: { color: colors.white, fontWeight: '700', fontSize: 15 },
+  screen: { flex: 1, backgroundColor: colors.bg },
+  body: { paddingHorizontal: space.lg },
+  h2: { color: colors.white, fontSize: 24, fontWeight: '800' },
+  sub: { color: colors.muted, fontSize: 13.5, lineHeight: 20, marginTop: 6 },
+  file: { flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: colors.bg2, borderColor: colors.borderGold, borderWidth: 1, borderStyle: 'dashed', borderRadius: radius.md, padding: 16, marginBottom: 14, marginTop: 4 },
+  fileOn: { borderStyle: 'solid' },
+  fileTxt: { color: colors.text, fontSize: 14, flex: 1 },
+  tapHint: { height: 0 },
+  err: { color: colors.red, fontSize: 13, marginBottom: 10 },
+  score: { fontSize: 78, fontWeight: '900', lineHeight: 84, marginTop: 12 },
+  scoreOf: { color: colors.muted, fontSize: 14, marginBottom: 12 },
+  cardTitle: { color: colors.white, fontSize: 16, fontWeight: '700', marginBottom: 12 },
+  issueRow: { flexDirection: 'row', alignItems: 'flex-start', marginBottom: 12 },
+  dot: { width: 8, height: 8, borderRadius: 4, marginTop: 6, marginRight: 10 },
+  issueMsg: { color: colors.text, fontSize: 13.5, flex: 1, lineHeight: 20 },
 });
