@@ -1,0 +1,33 @@
+{
+  "expo": {
+    "name": "ResumeRight",
+    "slug": "resumeright",
+    "scheme": "resumeright",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "dark",
+    "backgroundColor": "#0B1628",
+    "splash": {
+      "resizeMode": "contain",
+      "backgroundColor": "#0B1628"
+    },
+    "assetBundlePatterns": ["**/*"],
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "in.co.resumeright.app",
+      "infoPlist": {
+        "NSCameraUsageDescription": "Record a short video pitch for interview coaching.",
+        "NSMicrophoneUsageDescription": "Record audio for your video pitch.",
+        "NSPhotoLibraryUsageDescription": "Attach a resume or video from your library."
+      }
+    },
+    "android": {
+      "package": "in.co.resumeright.app",
+      "permissions": ["CAMERA", "RECORD_AUDIO", "READ_EXTERNAL_STORAGE"]
+    },
+    "plugins": [
+      "expo-document-picker",
+      "expo-image-picker"
+    ]
+  }
+}
