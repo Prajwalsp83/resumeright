@@ -21,12 +21,12 @@ export default function VideoPitchScreen() {
   async function record() {
     const perm = await ImagePicker.requestCameraPermissionsAsync();
     if (!perm.granted) return setErr('Camera permission is needed to record your pitch.');
-    const res = await ImagePicker.launchCameraAsync({ mediaTypes: ImagePicker.MediaTypeOptions.Videos, videoMaxDuration: MAX_SECONDS, quality: 0.7 });
+    const res = await ImagePicker.launchCameraAsync({ mediaTypes: ['videos'], videoMaxDuration: MAX_SECONDS, quality: 0.7 });
     if (!res.canceled && res.assets?.[0]) { setClip(res.assets[0]); setErr(''); }
   }
 
   async function upload() {
-    const res = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ImagePicker.MediaTypeOptions.Videos, quality: 0.7 });
+    const res = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['videos'], quality: 0.7 });
     if (!res.canceled && res.assets?.[0]) { setClip(res.assets[0]); setErr(''); }
   }
 
