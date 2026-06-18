@@ -11,7 +11,9 @@
       "resizeMode": "contain",
       "backgroundColor": "#0B1628"
     },
-    "assetBundlePatterns": ["**/*"],
+    "assetBundlePatterns": [
+      "**/*"
+    ],
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "in.co.resumeright.app",
@@ -23,11 +25,21 @@
     },
     "android": {
       "package": "in.co.resumeright.app",
-      "permissions": ["CAMERA", "RECORD_AUDIO", "READ_EXTERNAL_STORAGE"]
+      "permissions": [
+        "android.permission.CAMERA",
+        "android.permission.RECORD_AUDIO",
+        "android.permission.READ_EXTERNAL_STORAGE"
+      ]
     },
     "plugins": [
       "expo-document-picker",
       "expo-image-picker"
-    ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "5a1995d4-e9aa-41e6-869a-4485a13fd28d"
+      }
+    },
+    "owner": "praj83"
   }
 }
