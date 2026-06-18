@@ -34,16 +34,33 @@ EXPO_PUBLIC_API_URL=http://<your-LAN-ip>:5000 npx expo start
 Defaults to production (`https://api.resumeright.co.in`) when unset.
 
 ## Build installable binaries (EAS — no Xcode/Android Studio needed)
+
+Build profiles are pre-configured in `eas.json`:
+| Profile | Output | Use for |
+|---|---|---|
+| `development` | dev-client APK / iOS simulator build | testing native modules (Razorpay) with live reload |
+| `preview` | standalone **APK** (Android) | sharing a real installable build to testers |
+| `production` | **AAB** (Android) / store build (iOS) | store submission |
+
 ```bash
 npm install -g eas-cli
-eas login
-eas build:configure
-# Android test APK:
-eas build -p android --profile preview
+eas login                       # create a free Expo account if you don't have one
+eas init                        # ONE-TIME: links the project; writes expo.extra.eas.projectId + owner into app.json — commit that
+
+# Share a real installable Android build (full flow incl. Razorpay):
+eas build -p android --profile preview      # → download/scan a QR for the APK
+
+# Test native modules with live reload (dev client):
+eas build -p android --profile development
+npx expo start --dev-client
+
 # Store builds:
 eas build -p android --profile production
-eas build -p ios --profile production
+eas build -p ios     --profile production
 ```
+
+> `eas init` must be run once on your machine — it writes a project ID tied to your
+> Expo account into `app.json`. I can't generate that here. Commit the change it makes.
 
 ## Ship to the stores
 - **Google Play** — one-time ~$25 developer account, then `eas submit -p android`.
