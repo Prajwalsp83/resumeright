@@ -34,7 +34,7 @@ function Tabs() {
         headerShown: false,
         tabBarActiveTintColor: colors.gold,
         tabBarInactiveTintColor: colors.faint,
-        tabBarStyle: { backgroundColor: colors.bg2, borderTopColor: colors.border, height: 86, paddingTop: 8, paddingBottom: 28 },
+        tabBarStyle: { backgroundColor: colors.bg2, borderTopColor: colors.border, paddingTop: 6 },
         tabBarLabelStyle: { fontSize: 11, fontWeight: '600' },
         tabBarIcon: ({ color, size }) => <Ionicons name={ICONS[route.name] || 'ellipse'} size={size} color={color} />,
       })}

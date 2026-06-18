@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, TextInput, Pressable, ActivityIndicator, StyleSheet } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors, gradients, radius, space, shadow } from '../theme';
 
 // Small "✦ AI" pill used to mark AI-powered surfaces.
@@ -14,8 +15,9 @@ export function AIBadge({ label = 'AI', style }) {
 
 // Branded screen header — logo wordmark + optional AI badge + optional right slot.
 export function Header({ ai = false, right }) {
+  const insets = useSafeAreaInsets();
   return (
-    <View style={s.header}>
+    <View style={[s.header, { paddingTop: insets.top + 6 }]}>
       <Text style={s.logo}>Resume<Text style={s.logoGold}>Right</Text></Text>
       {ai && <AIBadge style={{ marginLeft: 8 }} />}
       <View style={{ flex: 1 }} />
